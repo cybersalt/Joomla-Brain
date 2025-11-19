@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" status)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" diff --staged)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" diff)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" log --oneline -5)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" add -A)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nAdd Claude configuration directory\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" push)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
