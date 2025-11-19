@@ -1,2 +1,2 @@
-# Shared validation script for Joomla packages
-# Usage: Run from parent repo root
+# Validate package script (shared)
+# ...existing code from StageIt-6/validate-package.ps1...
