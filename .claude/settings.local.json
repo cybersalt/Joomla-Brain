@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" status)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" diff --staged)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" diff)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" log --oneline -5)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" add -A)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nAdd Claude configuration directory\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" push)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" status --porcelain)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" diff --name-only)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nFix line endings in Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" rm --cached .claude/settings.local.json)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" add .claude/settings.local.json)",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nNormalize line endings for Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nUse CRLF line endings for Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
