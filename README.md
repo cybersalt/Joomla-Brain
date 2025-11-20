@@ -33,6 +33,7 @@ This repository contains best practices, scripts, and documentation for Joomla c
 - Maintain a development checklist for each Joomla version
 - **Language files are MANDATORY**: All extensions MUST use Joomla's core language system for all user-facing text
 - **Custom CSS tab**: All modules MUST include a dedicated tab/fieldset for custom CSS to allow users to add styling without template overrides
+- **Enhanced multi-select fields**: Use `layout="joomla.form.field.list-fancy-select"` for tag-style multi-select with removable chips (Joomla 5+)
 
 ## Language System Requirements
 
@@ -429,6 +430,173 @@ Before releasing a module, verify:
 - [ ] Module uses unique ID based on `$module->id`
 - [ ] Field description explains how to scope styles
 - [ ] Tested with actual CSS to verify functionality
+
+## Enhanced Multi-Select Fields (Joomla 5+)
+
+**MANDATORY**: Use Joomla's native fancy-select layout for all multi-select fields to provide modern UX with tag-style interface.
+
+### Why Fancy-Select Is Essential
+
+1. **Better UX**: Tag/chip interface with removable badges instead of scrolling list boxes
+2. **Searchable**: Users can type to filter options quickly
+3. **Native Joomla**: Uses built-in web components (no custom code needed)
+4. **Consistent**: Matches Joomla's admin interface standards
+5. **Accessible**: Better keyboard navigation and screen reader support
+
+### Implementation
+
+#### 1. Add Layout Attribute to Multi-Select Fields in XML
+
+For any field with `multiple="true"`, use the fancy-select layout:
+
+```xml
+<field
+    name="parent_ids"
+    type="category"
+    extension="com_content"
+    label="MOD_MODULENAME_PARENT_IDS_LABEL"
+    description="MOD_MODULENAME_PARENT_IDS_DESC"
+    multiple="true"
+    layout="joomla.form.field.list-fancy-select"
+    showon="selection_mode:multiple_parents"
+/>
+```
+
+**Important attributes:**
+- `multiple="true"` - Required for multi-select
+- `layout="joomla.form.field.list-fancy-select"` - Enables fancy-select UI
+- No `size` or `class` attributes needed
+
+#### 2. Load Web Asset in Module PHP File
+
+In your main module file (e.g., `mod_modulename.php`), load the fancy-select web component:
+
+```php
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\ModuleHelper;
+
+// Load fancy-select for enhanced multi-select in admin
+$app = Factory::getApplication();
+if ($app->isClient('administrator')) {
+    $wa = $app->getDocument()->getWebAssetManager();
+    $wa->useScript('webcomponent.field-fancy-select');
+}
+
+// ... rest of module code
+```
+
+### Supported Field Types
+
+The fancy-select layout works with:
+- `type="category"` - Category selection
+- `type="list"` - Custom option lists
+- `type="sql"` - Database-driven lists
+- Any field type that extends `ListField`
+
+### What Users See
+
+**Without fancy-select** (old way):
+```
+┌─────────────────────────┐
+│ Category 1              │
+│ Category 2              │
+│ Category 3              │
+│ Category 4              │ ← Scroll to see more
+│ Category 5              │
+└─────────────────────────┘
+```
+
+**With fancy-select** (correct way):
+```
+┌─────────────────────────────────────────────┐
+│ [Category 1 ×] [Category 3 ×] [Type to...] │ ← Selected as removable chips
+└─────────────────────────────────────────────┘
+  ↓ (Click to see dropdown)
+┌─────────────────────────────────────────────┐
+│ Category 2                                   │
+│ Category 4                                   │
+│ Category 5                                   │
+└─────────────────────────────────────────────┘
+```
+
+### Features
+
+- **Select**: Click an item from dropdown or type to search
+- **Remove**: Click × on any chip to deselect
+- **Search**: Type in box to filter options
+- **Keyboard**: Arrow keys, Enter to select, Backspace to remove last item
+
+### Complete Example
+
+**XML Manifest (`mod_example.xml`):**
+```xml
+<config>
+    <fields name="params">
+        <fieldset name="basic" label="JFIELD_BASIC_LABEL">
+            <field
+                name="categories"
+                type="category"
+                extension="com_content"
+                label="MOD_EXAMPLE_CATEGORIES_LABEL"
+                description="MOD_EXAMPLE_CATEGORIES_DESC"
+                multiple="true"
+                layout="joomla.form.field.list-fancy-select"
+            />
+        </fieldset>
+    </fields>
+</config>
+```
+
+**Module File (`mod_example.php`):**
+```php
+<?php
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\ModuleHelper;
+
+// Load fancy-select for enhanced multi-select in admin
+$app = Factory::getApplication();
+if ($app->isClient('administrator')) {
+    $wa = $app->getDocument()->getWebAssetManager();
+    $wa->useScript('webcomponent.field-fancy-select');
+}
+
+// Module logic here
+require ModuleHelper::getLayoutPath('mod_example', $params->get('layout', 'default'));
+```
+
+### Validation Checklist
+
+Before releasing an extension with multi-select fields, verify:
+
+- [ ] All multi-select fields use `layout="joomla.form.field.list-fancy-select"`
+- [ ] Web asset loaded in module PHP file with admin client check
+- [ ] No `class="advancedSelect"` or custom CSS classes (not needed)
+- [ ] No custom JavaScript for select enhancement (Joomla handles it)
+- [ ] Tested in administrator: chips appear with × buttons
+- [ ] Search/filter works when typing in field
+- [ ] Selected items can be removed by clicking ×
+
+### Common Mistakes to Avoid
+
+❌ **DON'T:**
+```xml
+<!-- Old/wrong approaches -->
+<field multiple="true" class="advancedSelect" />
+<field multiple="true" size="10" class="chosen" />
+<field multiple="true" type="list" /> <!-- Missing layout -->
+```
+
+✅ **DO:**
+```xml
+<field
+    multiple="true"
+    layout="joomla.form.field.list-fancy-select"
+/>
+```
 
 ## Changelog Format Requirements
 
