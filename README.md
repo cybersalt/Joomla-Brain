@@ -489,25 +489,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### CHANGELOG.html Format
 
-**CRITICAL**: HTML changelog MUST be article-ready (no `<html>`, `<head>`, or `<body>` tags)
+**CRITICAL**: HTML changelog MUST be article-ready (no `<html>`, `<head>`, or `<body>` tags, and no `<style>` tags)
 
 #### Purpose:
-The HTML changelog is designed to be **copy-pasted directly into Joomla articles** for release announcements and documentation pages.
+The HTML changelog is designed to be **copy-pasted directly into Joomla articles** for release announcements and documentation pages. It uses semantic HTML that inherits styling from the Joomla template.
 
 #### Structure:
 ```html
-<style>
-    .changelog-container {
-        /* All styles scoped to .changelog-container */
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        /* ... more styles ... */
-    }
-    .changelog-container h1 {
-        /* Scoped heading styles */
-    }
-    /* ... all other styles scoped ... */
-</style>
-
 <div class="changelog-container">
     <h1>📋 Extension Name - Changelog</h1>
 
@@ -535,69 +523,60 @@ The HTML changelog is designed to be **copy-pasted directly into Joomla articles
 
 ### Key Requirements for CHANGELOG.html
 
-#### 1. No Document Structure Tags
+#### 1. No Document Structure or Style Tags
 ❌ **NEVER include:**
 ```html
 <!DOCTYPE html>
 <html>
 <head>
+<style>
 <body>
 </body>
 </html>
 ```
 
 ✅ **ONLY include:**
-- `<style>` tag with scoped CSS
+- Semantic HTML content only
 - `<div>` container with content
+- Standard HTML tags (h1, h2, h3, ul, li, p, strong, code, etc.)
 
-#### 2. Scoped CSS
-All CSS must be scoped to `.changelog-container`:
-
-```css
-.changelog-container { /* base styles */ }
-.changelog-container h1 { /* not just h1 */ }
-.changelog-container ul { /* not just ul */ }
-```
-
-This prevents style conflicts when pasted into Joomla articles.
-
-#### 3. Self-Contained Styling
-Include all necessary CSS inline in the `<style>` tag:
+#### 2. Use Semantic HTML
+Use proper semantic HTML that will inherit styling from the Joomla template:
 
 ```html
-<style>
-    .changelog-container {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.6;
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 40px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    /* All other styles... */
-</style>
+<div class="changelog-container">
+    <h1>📋 Title</h1>
+    <h2>Version</h2>
+    <h3>Section</h3>
+    <ul>
+        <li><strong>Item</strong>: Description</li>
+    </ul>
+</div>
 ```
 
-#### 4. HTML Entities for Emojis
+The Joomla template CSS will style these elements appropriately.
+
+#### 3. Use Class Names for Identification
+Add class names to elements that might need custom styling:
+
+```html
+<div class="changelog-container">  <!-- Container class -->
+<span class="version-badge">       <!-- Version badge -->
+<span class="date">                <!-- Date -->
+<span class="section-icon">        <!-- Emoji icon -->
+<div class="intro">                <!-- Intro box -->
+<div class="version-summary">      <!-- Summary box -->
+<div class="footer">               <!-- Footer -->
+```
+
+Users can add custom CSS to their Joomla template if they want to style these classes.
+
+#### 4. Use Direct Emojis
 Use Unicode emojis directly (not HTML entities) for better display:
 - ✅ Use: `🚀` (direct emoji)
 - ❌ Don't use: `&#128640;` (HTML entity)
 
 Modern Joomla supports UTF-8 emojis without issues.
-
-#### 5. Responsive Design
-Include mobile-friendly styles:
-
-```css
-@media (max-width: 768px) {
-    .changelog-container {
-        padding: 20px;
-        font-size: 0.95em;
-    }
-}
-```
 
 ### Usage Workflow
 
@@ -642,12 +621,6 @@ Include mobile-friendly styles:
 
 **CHANGELOG.html:**
 ```html
-<style>
-    .changelog-container {
-        /* styles */
-    }
-</style>
-
 <div class="changelog-container">
     <h1>📋 Extension - Changelog</h1>
     <h2>
@@ -668,8 +641,9 @@ Before committing changelogs, verify:
 - [ ] Both CHANGELOG.md and CHANGELOG.html exist
 - [ ] Content matches between both files
 - [ ] CHANGELOG.md uses emoji section headers
-- [ ] CHANGELOG.html has NO `<html>`, `<head>`, or `<body>` tags
-- [ ] CHANGELOG.html CSS is scoped to `.changelog-container`
+- [ ] CHANGELOG.html has NO `<html>`, `<head>`, `<body>`, or `<style>` tags
+- [ ] CHANGELOG.html uses only semantic HTML
+- [ ] CHANGELOG.html has class names for optional styling
 - [ ] Version numbers follow semantic versioning
 - [ ] Dates are in YYYY-MM-DD format
 - [ ] New version added at top of file
@@ -684,7 +658,7 @@ Before committing changelogs, verify:
 <html>
 <head>
     <style>
-        body { /* unscoped */ }
+        .changelog { color: blue; }
     </style>
 </head>
 <body>
@@ -695,14 +669,17 @@ Before committing changelogs, verify:
 
 ✅ **DO:**
 ```html
-<style>
-    .changelog-container { /* scoped */ }
-</style>
-
 <div class="changelog-container">
-    ...
+    <h1>📋 Extension - Changelog</h1>
+    <h2><span class="version-badge">v1.0.0</span></h2>
+    <h3><span class="section-icon">🚀</span>New Features</h3>
+    <ul>
+        <li><strong>Feature</strong>: Description</li>
+    </ul>
 </div>
 ```
+
+**Note**: The Joomla template will provide all styling. If custom styling is needed, users can add CSS to their template that targets the class names provided.
 
 ## Usage Guide
 
