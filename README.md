@@ -32,6 +32,7 @@ This repository contains best practices, scripts, and documentation for Joomla c
 - Versioning: Use semantic versioning (MAJOR.MINOR.PATCH)
 - Maintain a development checklist for each Joomla version
 - **Language files are MANDATORY**: All extensions MUST use Joomla's core language system for all user-facing text
+- **Custom CSS tab**: All modules MUST include a dedicated tab/fieldset for custom CSS to allow users to add styling without template overrides
 
 ## Language System Requirements
 
@@ -204,6 +205,230 @@ In language file:
 ```ini
 MOD_MYMODULE="My Module"
 ```
+
+## Custom CSS Tab Requirement
+
+**MANDATORY**: All Joomla modules MUST include a dedicated Custom CSS tab to allow users to add styling without creating template overrides.
+
+### Why Custom CSS Tabs Are Essential
+
+1. **User Flexibility**: Users can customize styling without modifying template files
+2. **Instance-Specific Styling**: Different module instances can have unique styles
+3. **Update-Safe**: Custom CSS persists through module updates
+4. **No Template Override Required**: Reduces technical barriers for users
+5. **Professional Standard**: Expected feature in modern Joomla extensions
+
+### Implementation
+
+#### 1. Add Custom CSS Fieldset to XML Manifest
+
+Add a dedicated fieldset for custom CSS in your module XML:
+
+```xml
+<fieldset name="custom_css" label="MOD_MODULENAME_CUSTOM_CSS_LABEL">
+    <field
+        name="custom_css"
+        type="textarea"
+        label="MOD_MODULENAME_CUSTOM_CSS_FIELD_LABEL"
+        description="MOD_MODULENAME_CUSTOM_CSS_FIELD_DESC"
+        rows="10"
+        cols="50"
+        filter="raw"
+    />
+</fieldset>
+```
+
+**Important**: Use `filter="raw"` to allow CSS syntax without sanitization.
+
+#### 2. Add Language Strings
+
+Add these to your language file:
+
+```ini
+MOD_MODULENAME_CUSTOM_CSS_LABEL="Custom CSS"
+MOD_MODULENAME_CUSTOM_CSS_FIELD_LABEL="CSS Code"
+MOD_MODULENAME_CUSTOM_CSS_FIELD_DESC="Add custom CSS styles for this module. CSS will be scoped to this module instance."
+```
+
+#### 3. Load and Output Custom CSS in Template
+
+In your module template (e.g., `tmpl/default.php`):
+
+```php
+// Get custom CSS parameter
+$customCss = $params->get('custom_css', '');
+$moduleId = (int) $module->id;
+$wrapperId = 'mod-modulename-' . $moduleId;
+?>
+
+<style>
+    /* Your module's default styles */
+    #<?php echo $wrapperId; ?> .some-class {
+        /* styles */
+    }
+
+    <?php if (!empty($customCss)) : ?>
+    /* Custom CSS */
+    <?php echo $customCss; ?>
+    <?php endif; ?>
+</style>
+
+<div id="<?php echo $wrapperId; ?>" class="mod-modulename">
+    <!-- Module content -->
+</div>
+```
+
+### Best Practices for Custom CSS Implementation
+
+#### 1. Scope Styles to Module Instance
+
+Always use a unique ID based on the module ID:
+
+```php
+$wrapperId = 'mod-modulename-' . (int) $module->id;
+```
+
+This allows:
+- Multiple instances with different custom CSS
+- Specific targeting without affecting other modules
+- Clean CSS specificity
+
+#### 2. Position in Style Block
+
+Place custom CSS at the **end** of your style block so it can override default styles:
+
+```php
+<style>
+    /* Default module styles first */
+
+    <?php if (!empty($customCss)) : ?>
+    /* Custom CSS last - highest specificity */
+    <?php echo $customCss; ?>
+    <?php endif; ?>
+</style>
+```
+
+#### 3. Provide Usage Instructions
+
+In the field description, help users understand scoping:
+
+```ini
+MOD_MODULENAME_CUSTOM_CSS_FIELD_DESC="Add custom CSS styles for this module. Use #mod-modulename-<?php echo $module->id; ?> as the selector prefix to scope styles to this instance."
+```
+
+#### 4. Example CSS for Users
+
+Consider adding helpful comments in the placeholder or description:
+
+```xml
+<field
+    name="custom_css"
+    type="textarea"
+    label="MOD_MODULENAME_CUSTOM_CSS_FIELD_LABEL"
+    description="MOD_MODULENAME_CUSTOM_CSS_FIELD_DESC"
+    hint="Example: #mod-modulename-123 .item { color: red; }"
+    rows="10"
+    cols="50"
+    filter="raw"
+/>
+```
+
+### Security Considerations
+
+#### Safe Usage of filter="raw"
+
+While `filter="raw"` is necessary for CSS, be aware:
+
+1. **Only for CSS**: Never use `filter="raw"` for user-input fields that output HTML
+2. **Administrator Access Only**: Module parameters are only editable by administrators
+3. **Output in Style Tags**: CSS is output within `<style>` tags, not executable HTML
+4. **No JavaScript**: Users should add CSS only, not `<script>` tags
+
+#### Alternative: Sanitize CSS (Advanced)
+
+For extra security, you can sanitize CSS:
+
+```php
+// Basic CSS sanitization (strips script tags and dangerous patterns)
+$customCss = $params->get('custom_css', '');
+$customCss = strip_tags($customCss);
+$customCss = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $customCss);
+```
+
+### Complete Example
+
+**XML Manifest (`mod_example.xml`):**
+```xml
+<config>
+    <fields name="params">
+        <fieldset name="basic" label="JFIELD_BASIC_LABEL">
+            <!-- Your basic fields -->
+        </fieldset>
+
+        <fieldset name="custom_css" label="MOD_EXAMPLE_CUSTOM_CSS_LABEL">
+            <field
+                name="custom_css"
+                type="textarea"
+                label="MOD_EXAMPLE_CUSTOM_CSS_FIELD_LABEL"
+                description="MOD_EXAMPLE_CUSTOM_CSS_FIELD_DESC"
+                rows="10"
+                cols="50"
+                filter="raw"
+            />
+        </fieldset>
+
+        <fieldset name="advanced" label="JFIELD_CONFIG_ADVANCED_LABEL">
+            <!-- Advanced fields -->
+        </fieldset>
+    </fields>
+</config>
+```
+
+**Language File (`en-GB.mod_example.ini`):**
+```ini
+MOD_EXAMPLE_CUSTOM_CSS_LABEL="Custom CSS"
+MOD_EXAMPLE_CUSTOM_CSS_FIELD_LABEL="CSS Code"
+MOD_EXAMPLE_CUSTOM_CSS_FIELD_DESC="Add custom CSS styles for this module. Use the module wrapper ID to scope your styles."
+```
+
+**Template File (`tmpl/default.php`):**
+```php
+<?php
+defined('_JEXEC') or die;
+
+$moduleId = (int) $module->id;
+$wrapperId = 'mod-example-' . $moduleId;
+$customCss = $params->get('custom_css', '');
+?>
+
+<style>
+    #<?php echo $wrapperId; ?> {
+        /* Default module styles */
+    }
+
+    <?php if (!empty($customCss)) : ?>
+    /* Custom CSS */
+    <?php echo $customCss; ?>
+    <?php endif; ?>
+</style>
+
+<div id="<?php echo $wrapperId; ?>" class="mod-example">
+    <!-- Module content -->
+</div>
+```
+
+### Validation Checklist
+
+Before releasing a module, verify:
+
+- [ ] Custom CSS fieldset added to XML manifest
+- [ ] Field uses `filter="raw"` attribute
+- [ ] Language strings defined for tab and field
+- [ ] Custom CSS loaded in template with `$params->get('custom_css', '')`
+- [ ] Custom CSS output at end of style block
+- [ ] Module uses unique ID based on `$module->id`
+- [ ] Field description explains how to scope styles
+- [ ] Tested with actual CSS to verify functionality
 
 ## Usage Guide
 
