@@ -161,9 +161,8 @@ foreach ($file in $packageFiles) {
     }
 }
 
-# Copy additional folders
+# Copy language folder only - plugins are already in plg_*.zip
 if (Test-Path "language") { Copy-Item "language" -Destination "temp_package" -Recurse -Force }
-if (Test-Path "plugins") { Copy-Item "plugins" -Destination "temp_package" -Recurse -Force }
 
 New-ZipWithForwardSlashes -SourcePath (Resolve-Path "temp_package").Path -DestinationPath $packageName
 Remove-Item "temp_package" -Recurse -Force
