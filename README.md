@@ -28,7 +28,7 @@ This repository contains best practices, scripts, and documentation for Joomla c
 - No alert() popups: Use Bootstrap alerts in the system message container
 - Build scripts: Use PowerShell or batch scripts that preserve file encoding and use forward slashes in ZIPs
 - Installation script: Add cleanup code in `postflight()` to remove old/conflicting files and update sites
-- Changelog formats: Maintain both `CHANGELOG.md` and `CHANGELOG.html`
+- Changelog formats: Maintain both `CHANGELOG.md` and `CHANGELOG.html` (HTML must be article-ready without head/body tags)
 - Versioning: Use semantic versioning (MAJOR.MINOR.PATCH)
 - Maintain a development checklist for each Joomla version
 - **Language files are MANDATORY**: All extensions MUST use Joomla's core language system for all user-facing text
@@ -429,6 +429,280 @@ Before releasing a module, verify:
 - [ ] Module uses unique ID based on `$module->id`
 - [ ] Field description explains how to scope styles
 - [ ] Tested with actual CSS to verify functionality
+
+## Changelog Format Requirements
+
+**MANDATORY**: All extensions MUST maintain both `CHANGELOG.md` and `CHANGELOG.html` files.
+
+### Why Both Formats Are Required
+
+1. **CHANGELOG.md**: For developers, version control, and GitHub display
+2. **CHANGELOG.html**: For end-users and Joomla article integration
+3. **Consistency**: Same content in both formats ensures documentation accuracy
+4. **Accessibility**: Different audiences prefer different formats
+
+### CHANGELOG.md Format
+
+**Format**: Markdown with emoji section headers
+
+#### Structure:
+```markdown
+# Changelog
+
+All notable changes to [Extension Name] will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.2.0] - 2025-11-20
+
+### 🚀 New Features
+- **Feature Name**: Description of the feature
+  - Sub-feature detail
+  - Another detail
+
+### 🔧 Improvements
+- **Improvement**: Description
+
+### 📦 Build & Infrastructure
+- **Build change**: Description
+
+### 🐛 Bug Fixes
+- **Fixed issue**: Description
+
+### 📝 Documentation
+- Documentation updates
+
+## [1.1.0] - 2025-11-17
+...
+```
+
+#### Emoji Section Headers:
+- 🚀 New Features
+- 🔧 Improvements
+- 📦 Build & Infrastructure
+- 🐛 Bug Fixes
+- 🔍 Security
+- 📝 Documentation
+- 🎨 UI/UX
+- 🛡️ Breaking Changes
+
+### CHANGELOG.html Format
+
+**CRITICAL**: HTML changelog MUST be article-ready (no `<html>`, `<head>`, or `<body>` tags)
+
+#### Purpose:
+The HTML changelog is designed to be **copy-pasted directly into Joomla articles** for release announcements and documentation pages.
+
+#### Structure:
+```html
+<style>
+    .changelog-container {
+        /* All styles scoped to .changelog-container */
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        /* ... more styles ... */
+    }
+    .changelog-container h1 {
+        /* Scoped heading styles */
+    }
+    /* ... all other styles scoped ... */
+</style>
+
+<div class="changelog-container">
+    <h1>📋 Extension Name - Changelog</h1>
+
+    <div class="intro">
+        <p><strong>All notable changes...</strong></p>
+    </div>
+
+    <h2>
+        <span class="version-badge">v1.2.0</span>
+        <span class="date">2025-11-20</span>
+    </h2>
+
+    <h3><span class="section-icon">🚀</span>New Features</h3>
+    <ul>
+        <li><strong>Feature</strong>: Description</li>
+    </ul>
+
+    <!-- More versions... -->
+
+    <div class="footer">
+        <p>&copy; 2025 Your Name</p>
+    </div>
+</div>
+```
+
+### Key Requirements for CHANGELOG.html
+
+#### 1. No Document Structure Tags
+❌ **NEVER include:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+<body>
+</body>
+</html>
+```
+
+✅ **ONLY include:**
+- `<style>` tag with scoped CSS
+- `<div>` container with content
+
+#### 2. Scoped CSS
+All CSS must be scoped to `.changelog-container`:
+
+```css
+.changelog-container { /* base styles */ }
+.changelog-container h1 { /* not just h1 */ }
+.changelog-container ul { /* not just ul */ }
+```
+
+This prevents style conflicts when pasted into Joomla articles.
+
+#### 3. Self-Contained Styling
+Include all necessary CSS inline in the `<style>` tag:
+
+```html
+<style>
+    .changelog-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    /* All other styles... */
+</style>
+```
+
+#### 4. HTML Entities for Emojis
+Use Unicode emojis directly (not HTML entities) for better display:
+- ✅ Use: `🚀` (direct emoji)
+- ❌ Don't use: `&#128640;` (HTML entity)
+
+Modern Joomla supports UTF-8 emojis without issues.
+
+#### 5. Responsive Design
+Include mobile-friendly styles:
+
+```css
+@media (max-width: 768px) {
+    .changelog-container {
+        padding: 20px;
+        font-size: 0.95em;
+    }
+}
+```
+
+### Usage Workflow
+
+#### Creating Changelogs
+
+1. **Write CHANGELOG.md first** (easier to edit in markdown)
+2. **Convert to CHANGELOG.html** with proper styling
+3. **Ensure content matches** between both files
+4. **Test HTML** by pasting into a Joomla article
+
+#### Updating for New Releases
+
+1. Update version number in both files
+2. Add new version section at the top
+3. Categorize changes with emoji headers
+4. Keep formatting consistent
+5. Commit both files together
+
+#### Pasting into Joomla Articles
+
+1. Open CHANGELOG.html in text editor
+2. Copy **entire contents** (including `<style>` tag)
+3. In Joomla article editor, switch to **Code view**
+4. Paste the HTML
+5. Save article
+6. Preview to verify styling
+
+### Complete Example Structure
+
+**CHANGELOG.md:**
+```markdown
+# Changelog
+
+## [1.2.0] - 2025-11-20
+
+### 🚀 New Features
+- **Feature**: Description
+
+### 🔧 Improvements
+- **Improvement**: Description
+```
+
+**CHANGELOG.html:**
+```html
+<style>
+    .changelog-container {
+        /* styles */
+    }
+</style>
+
+<div class="changelog-container">
+    <h1>📋 Extension - Changelog</h1>
+    <h2>
+        <span class="version-badge">v1.2.0</span>
+        <span class="date">2025-11-20</span>
+    </h2>
+    <h3><span class="section-icon">🚀</span>New Features</h3>
+    <ul>
+        <li><strong>Feature</strong>: Description</li>
+    </ul>
+</div>
+```
+
+### Validation Checklist
+
+Before committing changelogs, verify:
+
+- [ ] Both CHANGELOG.md and CHANGELOG.html exist
+- [ ] Content matches between both files
+- [ ] CHANGELOG.md uses emoji section headers
+- [ ] CHANGELOG.html has NO `<html>`, `<head>`, or `<body>` tags
+- [ ] CHANGELOG.html CSS is scoped to `.changelog-container`
+- [ ] Version numbers follow semantic versioning
+- [ ] Dates are in YYYY-MM-DD format
+- [ ] New version added at top of file
+- [ ] Tested HTML by pasting into Joomla article
+- [ ] Both files committed together
+
+### Common Mistakes to Avoid
+
+❌ **DON'T:**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { /* unscoped */ }
+    </style>
+</head>
+<body>
+    <div class="changelog">...</div>
+</body>
+</html>
+```
+
+✅ **DO:**
+```html
+<style>
+    .changelog-container { /* scoped */ }
+</style>
+
+<div class="changelog-container">
+    ...
+</div>
+```
 
 ## Usage Guide
 
