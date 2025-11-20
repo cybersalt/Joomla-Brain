@@ -7,6 +7,7 @@
 - [ ] No PHP syntax errors
 - [ ] No deprecated Joomla 3/4 APIs used
 - [ ] Proper use of Joomla 5 namespaces
+- [ ] Language system properly implemented (see Language Requirements below)
 
 ### Version & Documentation
 - [ ] Version numbers updated in all manifests (pkg_*.xml, plugin XML, component XML)
@@ -223,6 +224,63 @@ private function savePluginParams($input) {
     $db->execute();
 }
 ```
+
+---
+
+## Language Requirements
+
+**MANDATORY**: All Joomla extensions must use the core language system.
+
+### Language Checklist
+
+- [ ] XML manifest uses language constants for `<name>` tag (e.g., `MOD_MODULENAME` not `mod_modulename`)
+- [ ] XML manifest uses language constants for `<description>` tag
+- [ ] All form field labels use language constants
+- [ ] All form field descriptions use language constants
+- [ ] Language files are UTF-8 without BOM
+- [ ] Language files follow proper naming convention (e.g., `en-GB.mod_modulename.ini`)
+- [ ] Language files are declared in manifest `<languages>` section
+- [ ] No hardcoded user-facing text in PHP code
+- [ ] Language strings use proper naming convention (UPPERCASE_WITH_UNDERSCORES)
+- [ ] Existing Joomla constants used where appropriate (JYES, JNO, etc.)
+
+### Language File Structure
+
+**Module example:**
+```
+language/en-GB/en-GB.mod_modulename.ini
+```
+
+**Component example:**
+```
+language/en-GB/en-GB.com_componentname.ini
+admin/language/en-GB/en-GB.com_componentname.ini
+admin/language/en-GB/en-GB.com_componentname.sys.ini
+```
+
+### XML Manifest Language Usage
+
+```xml
+<!-- CORRECT -->
+<name>MOD_CATEGORYGRID</name>
+<description>MOD_CATEGORYGRID_XML_DESCRIPTION</description>
+
+<!-- WRONG - Never do this -->
+<name>mod_categorygrid</name>
+<name>Category Grid</name>
+```
+
+### Common Language Constants
+
+Use existing Joomla constants:
+- `JYES` / `JNO` for yes/no options
+- `JFIELD_PUBLISHED_LABEL` / `JFIELD_PUBLISHED_DESC` for published field
+- `JFIELD_BASIC_LABEL` for basic fieldset
+- `JFIELD_CONFIG_ADVANCED_LABEL` for advanced fieldset
+- `JFIELD_ALT_LAYOUT_LABEL` for layout field
+- `COM_MODULES_FIELD_MODULECLASS_SFX_LABEL` for module class suffix
+
+See the [Language System Requirements](README.md#language-system-requirements) section in README.md for complete documentation.
 
 ---
 
