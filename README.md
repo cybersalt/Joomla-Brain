@@ -598,6 +598,214 @@ Before releasing an extension with multi-select fields, verify:
 />
 ```
 
+## Module Display and Content Extraction Best Practices
+
+### Conditional Module Output
+
+**BEST PRACTICE**: Modules should output nothing (not even wrapper HTML) when they have no content to display.
+
+#### Why Conditional Output Matters
+
+1. **Clean markup**: No empty divs cluttering the page
+2. **SEO**: Reduces empty markup that search engines must parse
+3. **Performance**: Fewer DOM nodes to render
+4. **Better UX**: No visual artifacts from empty containers
+
+#### Implementation Pattern
+
+**Wrap the entire module output** (including wrapper div) in a conditional check:
+
+```php
+<?php
+// Get data at the top
+$categories = CategoryGridHelper::getCategories($params);
+?>
+
+<!-- ALL CSS in <style> block BEFORE conditional check -->
+<style>
+    /* Module styles here */
+</style>
+
+<!-- Conditional wrapper around ALL HTML output -->
+<?php if (!empty($categories)) : ?>
+<div id="<?php echo $wrapperId; ?>" class="mod-modulename">
+    <!-- Module content here -->
+</div>
+
+<?php if ($enableFeature) : ?>
+<script>
+    // JavaScript if needed
+</script>
+<?php endif; ?>
+<?php endif; ?>
+```
+
+**Key points:**
+- Check for content BEFORE opening the wrapper div
+- Keep CSS in `<style>` blocks outside the conditional (CSS won't render if no content)
+- Close the conditional AFTER all module HTML including scripts
+- Use `!empty($data)` to check for content
+
+❌ **DON'T:**
+```php
+<div class="mod-modulename">
+    <?php if (empty($categories)) : ?>
+        <p>No items to display.</p>  <!-- Shows empty message -->
+    <?php else : ?>
+        <!-- Content -->
+    <?php endif; ?>
+</div>  <!-- Always outputs wrapper -->
+```
+
+✅ **DO:**
+```php
+<?php if (!empty($categories)) : ?>
+<div class="mod-modulename">
+    <!-- Content -->
+</div>
+<?php endif; ?>  <!-- No output at all if empty -->
+```
+
+### Extracting Images from HTML Content
+
+**COMMON NEED**: Extract images from Joomla category descriptions, article intros, or other HTML content fields.
+
+#### Regex Pattern for Image Extraction
+
+Use this pattern to extract the first image from HTML content:
+
+```php
+// Extract first image from description
+$image = '';
+if (!empty($category->description))
+{
+    // Match img tags in the description
+    if (preg_match('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $category->description, $matches))
+    {
+        $image = $matches[1];
+    }
+}
+```
+
+**Pattern breakdown:**
+- `<img[^>]+`: Match opening img tag with any attributes
+- `src=["\']`: Match src attribute with quote (single or double)
+- `([^"\']+)`: Capture group for the URL (anything except quotes)
+- `["\']`: Closing quote
+- `[^>]*>`: Rest of img tag
+- `i` flag: Case-insensitive matching
+
+#### Image Source Priority System
+
+**PATTERN**: Give users control over which image to use with a priority/fallback system.
+
+**Example implementation:**
+
+```php
+// Get image setting
+$imageSource = $params->get('image_source', 'core_first');
+
+// Get both possible images
+$coreImage = $paramsObj->get('image', ''); // Core category image
+$descImage = ''; // Extract from description (see pattern above)
+
+// Determine which to use based on priority
+$finalImage = '';
+switch ($imageSource)
+{
+    case 'core_only':
+        $finalImage = $coreImage;
+        break;
+
+    case 'description_only':
+        $finalImage = $descImage;
+        break;
+
+    case 'core_first':
+        $finalImage = !empty($coreImage) ? $coreImage : $descImage;
+        break;
+
+    case 'description_first':
+        $finalImage = !empty($descImage) ? $descImage : $coreImage;
+        break;
+}
+```
+
+**XML configuration field:**
+
+```xml
+<field
+    name="image_source"
+    type="list"
+    label="MOD_MODULENAME_IMAGE_SOURCE_LABEL"
+    description="MOD_MODULENAME_IMAGE_SOURCE_DESC"
+    default="core_first"
+>
+    <option value="core_only">MOD_MODULENAME_IMAGE_SOURCE_CORE_ONLY</option>
+    <option value="description_only">MOD_MODULENAME_IMAGE_SOURCE_DESC_ONLY</option>
+    <option value="core_first">MOD_MODULENAME_IMAGE_SOURCE_CORE_FIRST</option>
+    <option value="description_first">MOD_MODULENAME_IMAGE_SOURCE_DESC_FIRST</option>
+</field>
+```
+
+**Language strings:**
+
+```ini
+MOD_MODULENAME_IMAGE_SOURCE_LABEL="Image source"
+MOD_MODULENAME_IMAGE_SOURCE_DESC="Choose which image to use for each item."
+MOD_MODULENAME_IMAGE_SOURCE_CORE_ONLY="Core image only"
+MOD_MODULENAME_IMAGE_SOURCE_DESC_ONLY="First image in description only"
+MOD_MODULENAME_IMAGE_SOURCE_CORE_FIRST="Core image first, then description image"
+MOD_MODULENAME_IMAGE_SOURCE_DESC_FIRST="Description image first, then core image"
+```
+
+#### Use Cases
+
+**Categories:**
+- Core category image vs. first image in category description
+- Useful when users paste rich content into descriptions
+
+**Articles:**
+- Intro image vs. first image in intro text
+- Full image vs. first image in full text
+
+**Custom Components:**
+- Any field with HTML content that may contain images
+- Providing flexibility for content editors
+
+### Responsive Image Handling
+
+**PATTERN**: Images should adapt to container width, especially in single-column mobile layouts.
+
+```css
+/* Desktop: Fixed dimensions */
+#module-id .image-wrapper img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 200px;  /* From module settings */
+    object-fit: cover;
+}
+
+/* Mobile: Remove height constraints */
+@media (max-width: 600px) {
+    #module-id .grid-item {
+        width: 100%;  /* Full width */
+    }
+
+    #module-id .image-wrapper img {
+        max-height: none;  /* Remove constraint */
+        height: auto;      /* Natural aspect ratio */
+    }
+}
+```
+
+**Key points:**
+- Use `max-height` for desktop to constrain images
+- Use `object-fit: cover` to maintain aspect ratio while filling container
+- Remove `max-height` constraint on mobile for better responsiveness
+- Always set `width: 100%` for responsive behavior
+
 ## Changelog Format Requirements
 
 **MANDATORY**: All extensions MUST maintain both `CHANGELOG.md` and `CHANGELOG.html` files.
