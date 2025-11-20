@@ -32,17 +32,135 @@ This repository contains best practices, scripts, and documentation for Joomla c
 - Versioning: Use semantic versioning (MAJOR.MINOR.PATCH)
 - Maintain a development checklist for each Joomla version
 
-## Usage
-Add this repository as a submodule in your Joomla project:
+## Usage Guide
 
-```
-git submodule add <shared-repo-url> shared
+### Adding Joomla-Brain to Your Project
+
+#### Step 1: Add as a Submodule
+
+From your Joomla project root directory, run:
+
+```bash
+git submodule add https://github.com/cybersalt/Joomla-Brain.git joomla-brain
+git commit -m "Add Joomla-Brain submodule for development best practices"
 ```
 
-Update the submodule as needed:
+This creates a `joomla-brain/` directory in your project with all the resources.
+
+#### Step 2: Update Your Build Scripts
+
+Reference Joomla-Brain in your build scripts. Example for batch scripts:
+
+```batch
+@echo off
+REM Best Practices Reference: See joomla-brain/PACKAGE-BUILD-NOTES.md
+REM Joomla 5 Checklist: See joomla-brain/JOOMLA5-CHECKLIST.md
+
+REM ... your build commands here ...
 ```
-git submodule update --remote
+
+#### Step 3: Create a Configuration File (Optional)
+
+Create a `.joomla-brain-config` file in your project root to document your setup:
+
+```bash
+# Joomla-Brain Configuration
+PROJECT_TYPE=module  # or component, plugin, package
+PROJECT_NAME=mod_yourmodule
+JOOMLA_VERSION=5.0
+MIN_PHP_VERSION=8.1.0
+
+# Build Configuration
+BUILD_SCRIPT=package-j5.bat
+PACKAGE_NAME=mod_yourmodule_j5.zip
+
+# Checklist References
+CHECKLIST=joomla-brain/JOOMLA5-CHECKLIST.md
+BUILD_NOTES=joomla-brain/PACKAGE-BUILD-NOTES.md
 ```
+
+#### Step 4: Create Project Documentation
+
+Add a `README.md` to your project that references Joomla-Brain:
+
+```markdown
+# Your Joomla Extension
+
+## Development
+
+This project follows best practices defined in the [Joomla-Brain](joomla-brain/) submodule.
+
+### Key References
+- **Joomla 5 Checklist**: [joomla-brain/JOOMLA5-CHECKLIST.md](joomla-brain/JOOMLA5-CHECKLIST.md)
+- **Package Build Notes**: [joomla-brain/PACKAGE-BUILD-NOTES.md](joomla-brain/PACKAGE-BUILD-NOTES.md)
+- **Best Practices**: [joomla-brain/README.md](joomla-brain/README.md)
+
+### Building
+See [joomla-brain/JOOMLA5-CHECKLIST.md](joomla-brain/JOOMLA5-CHECKLIST.md) before building releases.
+```
+
+### Using Joomla-Brain Resources
+
+#### Before Each Release
+
+1. **Review the Checklist**: Open `joomla-brain/JOOMLA5-CHECKLIST.md` (or `JOOMLA6-CHECKLIST.md`)
+2. **Update Version Numbers**: In all XML manifests
+3. **Update Changelogs**: Both `CHANGELOG.md` and `CHANGELOG.html` with emoji headers
+4. **Build Package**: Using your build script that follows Joomla-Brain standards
+5. **Test Installation**: On a clean Joomla site
+
+#### During Development
+
+- **Reference Best Practices**: Check `joomla-brain/README.md` for coding standards
+- **Troubleshooting Builds**: See `joomla-brain/PACKAGE-BUILD-NOTES.md` for common issues
+- **File Encoding Issues**: See `joomla-brain/FILE-CORRUPTION-FIX.md`
+
+#### Build Scripts
+
+You can either:
+1. **Use the provided script**: Copy `joomla-brain/build-package.bat` to your project root and customize
+2. **Reference in your script**: Add comments pointing to Joomla-Brain documentation
+
+### Updating Joomla-Brain
+
+To get the latest best practices and scripts:
+
+```bash
+git submodule update --remote joomla-brain
+git add joomla-brain
+git commit -m "Update Joomla-Brain to latest version"
+```
+
+### Working with Submodules in Your Team
+
+#### Cloning a Project with Joomla-Brain
+
+When team members clone your project:
+
+```bash
+git clone <your-repo-url>
+cd <your-repo>
+git submodule init
+git submodule update
+```
+
+Or clone with submodules in one step:
+
+```bash
+git clone --recurse-submodules <your-repo-url>
+```
+
+#### Keeping Joomla-Brain Updated
+
+Team members can update to the latest Joomla-Brain:
+
+```bash
+git submodule update --remote joomla-brain
+```
+
+### Example Integration
+
+See the [cs-category-grid-display](https://github.com/cybersalt/cs-category-grid-display) repository for a complete example of Joomla-Brain integration.
 
 ## Contributing
 Feel free to add more best practices and scripts to help Joomla developers!
