@@ -32,6 +32,139 @@
 
 ## Common Issues & Solutions
 
+### Component "Class Not Found" Errors
+
+**Problem**: `Class "Joomla\Component\ComponentName\Administrator\Extension\ComponentNameComponent" not found`
+
+**Common Causes & Solutions**:
+
+#### 1. Namespace Duplication Bug
+**Symptom**: Autoload cache shows `Joomla\Component\Name\Administrator\Administrator\` (double Administrator)
+
+**Cause**: When namespace is declared inside `<administration>` section, Joomla automatically appends `\Administrator` to it.
+
+**Solution**: Remove `\Administrator` suffix from namespace declaration:
+```xml
+<!-- WRONG - causes double Administrator -->
+<namespace path="src">Joomla\Component\ContentName\Administrator</namespace>
+
+<!-- CORRECT - Joomla adds \Administrator automatically -->
+<namespace path="src">Joomla\Component\ContentName</namespace>
+```
+
+#### 2. Missing `folder="admin"` Attribute
+**Symptom**: Files installed at wrong location, namespace mapping fails
+
+**Cause**: Without `folder="admin"` attribute, Joomla doesn't know where to copy files from in the ZIP.
+
+**Solution**: Add folder attribute to `<files>` tag:
+```xml
+<administration>
+    <files folder="admin">
+        <folder>src</folder>
+        <folder>services</folder>
+    </files>
+</administration>
+```
+
+**Package Structure**:
+```
+com_component.zip
+├── componentname.xml
+├── script.php
+└── admin/              ← All admin files here
+    ├── src/
+    ├── services/
+    └── tmpl/
+```
+
+#### 3. Stale Autoload Cache
+**Symptom**: Component installs but class still not found, even after reinstall
+
+**Cause**: `administrator/cache/autoload_psr4.php` not regenerating with correct mappings
+
+**Solution**: Add installation script to auto-clear cache:
+```php
+// script.php
+protected function clearAutoloadCache()
+{
+    $cacheFile = JPATH_ADMINISTRATOR . '/cache/autoload_psr4.php';
+    if (file_exists($cacheFile)) {
+        @unlink($cacheFile);
+    }
+}
+
+public function postflight($type, $parent)
+{
+    $this->clearAutoloadCache();
+}
+```
+
+### Component Service Provider Issues
+
+**Problem**: `Call to undefined method setRegistry()`
+
+**Cause**: `setRegistry()` method was removed from `MVCComponent` in Joomla 5
+
+**Solution**: Remove the call from `services/provider.php`:
+```php
+// WRONG (J3/J4)
+use Joomla\CMS\HTML\Registry;
+$component->setRegistry($container->get(Registry::class));
+
+// CORRECT (J5)
+// Just remove it - not needed
+$component = new ComponentNameComponent(...);
+$component->setMVCFactory($container->get(MVCFactoryInterface::class));
+return $component;
+```
+
+### Template/Layout Not Found Errors
+
+**Problem**: `Layout default not found`
+
+**Cause**: Templates must be in subdirectory matching view name (Joomla 5 MVC convention)
+
+**Solution**: Organize templates by view name:
+```
+WRONG:
+tmpl/default.php
+
+CORRECT:
+tmpl/articles/default.php       (for ArticlesView)
+tmpl/article/edit.php            (for ArticleView)
+```
+
+View-to-template mapping:
+- View class: `src/View/Articles/HtmlView.php`
+- Template: `tmpl/articles/default.php`
+
+### Pagination API Changes
+
+**Problem**: `Call to undefined method Pagination::getTotal()`
+
+**Cause**: Joomla 5 changed pagination from methods to public properties
+
+**Solution**: Use properties instead of methods:
+```php
+// WRONG (J3/J4)
+$this->pagination->getTotal()
+$this->pagination->getLimitStart()
+
+// CORRECT (J5)
+$this->pagination->total
+$this->pagination->limitstart
+```
+
+Available properties:
+- `$pagination->total` - Total row count
+- `$pagination->limit` - Rows per page
+- `$pagination->limitstart` - Starting record
+- `$pagination->pagesTotal` - Total pages
+- `$pagination->pagesCurrent` - Current page
+
+**Note**: `getListFooter()` still works in J5 but consider using `getPaginationLinks()` for future compatibility.
+
 ### Plugin Parameters Not Taking Effect from Component
 
 **Problem**: Plugin settings saved from component don't take effect immediately.
