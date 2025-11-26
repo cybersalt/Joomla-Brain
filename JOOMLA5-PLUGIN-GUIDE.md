@@ -19,20 +19,23 @@ plg_content_myplugin/
 
 ## CRITICAL: Naming Rules
 
-1. **XML filename** must match the `plugin` attribute
-   - `plugin="myplugin"` requires `myplugin.xml`
-   - Mismatch causes namespace loading failure (JSON parse errors on install)
-2. **Language files** must include plugin type and element
+1. **Extension tag MUST have `element` attribute**
+   - `<extension type="plugin" group="content" element="myplugin" method="upgrade">`
+   - Missing `element` causes JSON parse error on install (Joomla returns HTML error)
+2. **XML filename** must match the `plugin` attribute AND `element` attribute
+   - `element="myplugin"` + `plugin="myplugin"` requires `myplugin.xml`
+   - Mismatch causes namespace loading failure
+3. **Language files** must include plugin type and element
    - Format: `plg_{group}_{element}.ini`
-3. **Namespace** must match the `use` statement in provider.php
-4. **Check** `administrator/cache/autoload_psr4.php` if namespace issues occur
+4. **Namespace** must match the `use` statement in provider.php
+5. **Check** `administrator/cache/autoload_psr4.php` if namespace issues occur
 
 ---
 
 ## Manifest XML (Joomla 5)
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<extension type="plugin" group="content" method="upgrade">
+<extension type="plugin" group="content" element="myplugin" method="upgrade">
     <name>plg_content_myplugin</name>
     <namespace path="src">MyCompany\Plugin\Content\MyPlugin</namespace>
     <files>
