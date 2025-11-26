@@ -1,5 +1,7 @@
 # Joomla 5 Plugin Development Quick Reference
 
+**Source**: [Joomla Manual - Plugin Tutorial](https://manual.joomla.org/docs/5.3/building-extensions/plugins/basic-content-plugin/)
+
 ## Joomla 5 Native Plugin Structure
 
 ### Required Files
@@ -19,27 +21,35 @@ plg_content_myplugin/
 
 ## CRITICAL: Naming Rules
 
-1. **Extension tag MUST have `element` attribute**
-   - `<extension type="plugin" group="content" element="myplugin" method="upgrade">`
-   - Missing `element` causes JSON parse error on install (Joomla returns HTML error)
-2. **XML filename** must match the `plugin` attribute AND `element` attribute
-   - `element="myplugin"` + `plugin="myplugin"` requires `myplugin.xml`
+1. **XML filename** must match the `plugin` attribute
+   - `plugin="myplugin"` requires `myplugin.xml`
    - Mismatch causes namespace loading failure
-3. **Language files** must include plugin type and element
+2. **Language files** must include plugin type and element
    - Format: `plg_{group}_{element}.ini`
-4. **Namespace** must match the `use` statement in provider.php
-5. **Check** `administrator/cache/autoload_psr4.php` if namespace issues occur
+3. **Namespace** must match the `use` statement in provider.php
+4. **Check** `administrator/cache/autoload_psr4.php` if namespace issues occur
+
+**NOTE**: The `element` attribute is NOT required on the extension tag for plugins (contrary to some sources).
 
 ---
 
 ## Manifest XML (Joomla 5)
+
+Based on official documentation:
+
 ```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<extension type="plugin" group="content" element="myplugin" method="upgrade">
-    <name>plg_content_myplugin</name>
+<?xml version="1.0" encoding="utf-8"?>
+<extension method="upgrade" type="plugin" group="content">
+    <name>PLG_CONTENT_MYPLUGIN</name>
+    <version>1.0</version>
+    <description>PLG_CONTENT_MYPLUGIN_DESCRIPTION</description>
+    <author>Your Name</author>
+    <creationDate>Today</creationDate>
+    <copyright>(C) 2025 Your Company</copyright>
+    <license>GNU General Public License version 2 or later</license>
     <namespace path="src">MyCompany\Plugin\Content\MyPlugin</namespace>
     <files>
-        <folder plugin="myplugin">services</folder>  <!-- CRITICAL: filename.xml must match this -->
+        <folder plugin="myplugin">services</folder>
         <folder>src</folder>
     </files>
     <languages>
@@ -49,9 +59,18 @@ plg_content_myplugin/
 </extension>
 ```
 
+**Key Points:**
+- Attribute order: `method`, `type`, `group`
+- NO `element` attribute on extension tag
+- NO `language` folder in `<files>` section - languages are declared separately
+- `plugin` attribute on the services folder identifies the plugin
+
 ---
 
 ## Service Provider (Joomla 5)
+
+Based on official documentation:
+
 ```php
 <?php
 defined('_JEXEC') or die;
@@ -64,15 +83,17 @@ use Joomla\DI\ServiceProviderInterface;
 use Joomla\Event\DispatcherInterface;
 use MyCompany\Plugin\Content\MyPlugin\Extension\MyPlugin;
 
-return new class () implements ServiceProviderInterface {
-    public function register(Container $container): void
+return new class implements ServiceProviderInterface {
+    public function register(Container $container)
     {
         $container->set(
             PluginInterface::class,
             function (Container $container) {
-                $config = (array) PluginHelper::getPlugin('content', 'myplugin');
-                $subject = $container->get(DispatcherInterface::class);
-                $plugin = new MyPlugin($subject, $config);
+                $dispatcher = $container->get(DispatcherInterface::class);
+                $plugin = new MyPlugin(
+                    $dispatcher,
+                    (array) PluginHelper::getPlugin('content', 'myplugin')
+                );
                 $plugin->setApplication(Factory::getApplication());
                 return $plugin;
             }
@@ -81,9 +102,15 @@ return new class () implements ServiceProviderInterface {
 };
 ```
 
+**Key Points:**
+- `new class implements` (no parentheses)
+- `public function register(Container $container)` (no return type in official docs)
+- Dispatcher is first argument, config array second
+
 ---
 
 ## Main Plugin Class (Joomla 5 Native)
+
 ```php
 <?php
 namespace MyCompany\Plugin\Content\MyPlugin\Extension;
@@ -182,8 +209,12 @@ Located in `libraries/src/Event/`:
 ## Common Errors
 
 ### "Unexpected token '<'... is not valid JSON"
-**Cause**: Namespace not loading properly
-**Fix**: Ensure XML filename matches `plugin` attribute exactly
+**Cause**: Joomla installer returning HTML error page instead of JSON
+**Possible Fixes**:
+1. Ensure XML filename matches `plugin` attribute exactly
+2. Check PHP syntax errors in provider.php or Extension class
+3. Verify namespace declarations match across all files
+4. Delete `administrator/cache/autoload_psr4.php` and reinstall
 
 ### "Class not found"
 **Cause**: Namespace mismatch between manifest, provider.php, and class file
@@ -191,3 +222,11 @@ Located in `libraries/src/Event/`:
 1. Check `administrator/cache/autoload_psr4.php`
 2. Delete cache file and reinstall
 3. Verify all three locations use identical namespace
+
+---
+
+## Official Documentation Links
+
+- [Plugin Tutorial](https://manual.joomla.org/docs/5.3/building-extensions/plugins/basic-content-plugin/)
+- [Modules and Plugins DI](https://manual.joomla.org/docs/general-concepts/dependency-injection/modules-and-plugins/)
+- [Manifest Files](https://manual.joomla.org/docs/5.4/building-extensions/install-update/installation/manifest/)
