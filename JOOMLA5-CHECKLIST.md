@@ -252,11 +252,12 @@ private function loadFreshParams(): void
 - Use code formatting for technical terms: \`admin/\`, \`usergrouplist\`
 
 ### HTML Format (CHANGELOG.html)
-- Create styled HTML version for better presentation
+- **IMPORTANT**: HTML version must contain the COMPLETE changelog, not just recent versions
+- Do NOT link to CHANGELOG.md as a "see full history" fallback - this creates broken links
+- Convert entire CHANGELOG.md content to HTML format
 - Use HTML entities for emojis: `&#128640;` for 🚀
 - Include CSS styling for consistent look
-- Only include recent versions (last 3-4)
-- Link to full CHANGELOG.md for complete history
+- Keep both files in sync - when updating CHANGELOG.md, regenerate CHANGELOG.html with full content
 
 ---
 
