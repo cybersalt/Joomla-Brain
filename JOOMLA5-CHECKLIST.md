@@ -252,12 +252,14 @@ private function loadFreshParams(): void
 - Use code formatting for technical terms: \`admin/\`, \`usergrouplist\`
 
 ### HTML Format (CHANGELOG.html)
-- **IMPORTANT**: HTML version must contain the COMPLETE changelog, not just recent versions
+- **CRITICAL**: HTML must be article-ready - NO `<html>`, `<head>`, `<body>`, or `<style>` tags
+- HTML version must contain the COMPLETE changelog, not just recent versions
 - Do NOT link to CHANGELOG.md as a "see full history" fallback - this creates broken links
-- Convert entire CHANGELOG.md content to HTML format
-- Use HTML entities for emojis: `&#128640;` for 🚀
-- Include CSS styling for consistent look
+- Use semantic HTML only (`<div>`, `<h1>`, `<h2>`, `<ul>`, `<li>`, etc.)
+- Use direct emojis (🚀) not HTML entities (`&#128640;`)
+- Add class names for optional styling: `.changelog-container`, `.version-badge`, `.date`, `.section-icon`
 - Keep both files in sync - when updating CHANGELOG.md, regenerate CHANGELOG.html with full content
+- See README.md "Changelog Format Requirements" section for complete documentation
 
 ---
 
