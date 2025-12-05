@@ -1,14 +1,21 @@
 # Joomla 5 Module Development Guide
 
-This guide covers best practices for building native Joomla 5 modules using the modern dispatcher pattern with dependency injection.
+This guide covers best practices for building native Joomla 5 modules. Joomla 5 supports two patterns:
 
-## File Structure
+1. **Dispatcher Pattern** (Modern) - No entry point file, uses DI container
+2. **Helper Pattern** (Traditional) - Uses `mod_*.php` entry point with explicit require
 
-A Joomla 5 module requires this directory layout:
+Both are valid; choose based on your needs. The Dispatcher pattern is what Joomla core uses.
+
+---
+
+## Pattern 1: Dispatcher Pattern (Recommended)
+
+### File Structure
 
 ```
 mod_example/
-├── mod_example.xml              # Manifest file (NO mod_example.php entry point needed!)
+├── mod_example.xml              # Manifest file (NO mod_example.php needed!)
 ├── services/
 │   └── provider.php             # Dependency injection provider
 ├── src/
@@ -519,6 +526,252 @@ Look for `D....` markers indicating proper directory entries:
 - [ ] CSS uses variables for theme compatibility
 - [ ] Module outputs nothing when empty (no wrapper divs)
 
+---
+
+## Pattern 2: Helper Pattern (Traditional)
+
+This pattern uses an entry point file with explicit `require_once`. It's simpler and works reliably across all hosting environments.
+
+### File Structure
+
+```
+mod_mymodule/
+├── mod_mymodule.xml          # Module manifest
+├── mod_mymodule.php          # Entry point
+├── src/
+│   └── Site/                 # IMPORTANT: Site subfolder for frontend modules
+│       └── Helper/
+│           └── MymoduleHelper.php
+├── tmpl/
+│   └── default.php           # Default template
+└── language/
+    └── en-GB/
+        ├── mod_mymodule.ini
+        └── mod_mymodule.sys.ini
+```
+
+**IMPORTANT**: For site (frontend) modules, helper classes go in `src/Site/Helper/`, not just `src/Helper/`. The `Site` folder is part of the Joomla 5 namespace convention.
+
+### Manifest (mod_mymodule.xml)
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+    <name>MOD_MYMODULE</name>
+    <author>Your Name</author>
+    <creationDate>2025-01</creationDate>
+    <copyright>(C) 2025 Your Company. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <authorEmail>you@example.com</authorEmail>
+    <authorUrl>https://example.com</authorUrl>
+    <version>1.0.0</version>
+    <description>MOD_MYMODULE_DESC</description>
+    <namespace path="src">YourCompany\Module\MyModule</namespace>
+
+    <files>
+        <filename module="mod_mymodule">mod_mymodule.php</filename>
+        <folder>src</folder>
+        <folder>tmpl</folder>
+    </files>
+
+    <languages>
+        <language tag="en-GB">language/en-GB/mod_mymodule.ini</language>
+        <language tag="en-GB">language/en-GB/mod_mymodule.sys.ini</language>
+    </languages>
+
+    <config>
+        <fields name="params">
+            <fieldset name="basic">
+                <!-- Your parameter fields here -->
+            </fieldset>
+        </fields>
+    </config>
+</extension>
+```
+
+### Entry Point (mod_mymodule.php)
+
+```php
+<?php
+/**
+ * @package     YourCompany.Module.MyModule
+ * @subpackage  mod_mymodule
+ *
+ * @copyright   (C) 2025 Your Company. All rights reserved.
+ * @license     GNU General Public License version 2 or later
+ */
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Helper\ModuleHelper;
+use YourCompany\Module\MyModule\Site\Helper\MymoduleHelper;
+
+// IMPORTANT: Explicit require - Joomla's namespace autoloader is unreliable for modules
+require_once __DIR__ . '/src/Site/Helper/MymoduleHelper.php';
+
+/** @var \Joomla\Registry\Registry $params */
+/** @var \stdClass $module */
+
+// Get data from helper
+$items = MymoduleHelper::getItems($params);
+$moduleclass_sfx = htmlspecialchars($params->get('moduleclass_sfx', ''), ENT_COMPAT, 'UTF-8');
+
+// Load the template
+require ModuleHelper::getLayoutPath('mod_mymodule', $params->get('layout', 'default'));
+```
+
+**Why require_once?** Joomla 5's namespace autoloader (declared via `<namespace>` in the manifest) does **not reliably work for modules** in all hosting environments. The `use` statement provides IDE autocompletion while `require_once` ensures the class loads.
+
+### Helper Class (src/Site/Helper/MymoduleHelper.php)
+
+```php
+<?php
+/**
+ * @package     YourCompany.Module.MyModule
+ * @subpackage  mod_mymodule
+ *
+ * @copyright   (C) 2025 Your Company. All rights reserved.
+ * @license     GNU General Public License version 2 or later
+ */
+
+namespace YourCompany\Module\MyModule\Site\Helper;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\Registry\Registry;
+
+class MymoduleHelper
+{
+    public static function getItems(Registry $params): array
+    {
+        // Your logic here
+        return [];
+    }
+}
+```
+
+### Common "Class Not Found" Error (Helper Pattern)
+
+If you get `Class "...\Site\Helper\MymoduleHelper" not found`:
+
+1. **Check file location**: Must be `src/Site/Helper/`, not `src/Helper/`
+2. **Check namespace in PHP file**: Must include `Site` - `namespace YourCompany\Module\MyModule\Site\Helper;`
+3. **Add require_once**: The autoloader is unreliable - add explicit require in entry point
+4. **Uninstall and reinstall**: Namespace registration happens at install time
+
+---
+
+## Detecting Current Page Context
+
+Modules often need to know what category or article is being displayed:
+
+```php
+use Joomla\CMS\Factory;
+
+public static function getCurrentCategoryId(): ?int
+{
+    $app = Factory::getApplication();
+    $input = $app->getInput();
+
+    $option = $input->getCmd('option', '');
+    $view = $input->getCmd('view', '');
+    $id = $input->getInt('id', 0);
+
+    if ($option !== 'com_content' || $id === 0) {
+        return null;
+    }
+
+    // On category blog/list view, the id IS the category id
+    if ($view === 'category') {
+        return $id;
+    }
+
+    // On article view, query the database for the article's category
+    if ($view === 'article') {
+        try {
+            $db = Factory::getContainer()->get('DatabaseDriver');
+            $query = $db->getQuery(true)
+                ->select($db->quoteName('catid'))
+                ->from($db->quoteName('#__content'))
+                ->where($db->quoteName('id') . ' = ' . $id);
+            $db->setQuery($query);
+
+            $catId = $db->loadResult();
+            return $catId ? (int) $catId : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    return null;
+}
+```
+
+---
+
+## Dynamic Inline Styles
+
+For modules with configurable CSS, generate unique IDs:
+
+```php
+// In mod_mymodule.php or Dispatcher
+$moduleId = 'mod-mymodule-' . $module->id;
+
+$cssParams = [
+    'bg_color'    => $params->get('bg_color', '#ffffff'),
+    'text_color'  => $params->get('text_color', '#000000'),
+];
+```
+
+```php
+// In tmpl/default.php
+?>
+<style>
+#<?php echo $moduleId; ?> {
+    background-color: <?php echo htmlspecialchars($cssParams['bg_color'], ENT_QUOTES, 'UTF-8'); ?>;
+    color: <?php echo htmlspecialchars($cssParams['text_color'], ENT_QUOTES, 'UTF-8'); ?>;
+}
+</style>
+
+<div id="<?php echo $moduleId; ?>" class="mod-mymodule<?php echo $moduleclass_sfx; ?>">
+    <!-- content -->
+</div>
+```
+
+---
+
+## Building URL Links
+
+### Using Joomla's Router
+
+```php
+use Joomla\CMS\Router\Route;
+
+$url = 'index.php?option=com_content&view=category&id=' . $categoryId;
+$url .= '&letter=' . urlencode($letter);
+
+$routedUrl = Route::_($url);
+```
+
+### With Menu Item
+
+```php
+$menuItemId = $params->get('target_menu_item', '');
+
+$url = 'index.php';
+if (!empty($menuItemId)) {
+    $url .= '?Itemid=' . (int) $menuItemId;
+    $url .= '&myfilter=' . urlencode($value);
+} else {
+    $url .= '?myfilter=' . urlencode($value);
+}
+
+return Route::_($url);
+```
+
+---
+
 ## Example Repositories
 
-- [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) - World Clocks module demonstrating all best practices
+- [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) - World Clocks module using Dispatcher pattern
