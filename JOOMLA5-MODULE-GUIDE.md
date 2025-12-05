@@ -2,10 +2,10 @@
 
 This guide covers best practices for building native Joomla 5 modules. Joomla 5 supports two patterns:
 
-1. **Dispatcher Pattern** (Modern) - No entry point file, uses DI container
-2. **Helper Pattern** (Traditional) - Uses `mod_*.php` entry point with explicit require
+1. **Dispatcher Pattern** (Recommended) - No entry point file, uses DI container - this is what Joomla core modules use
+2. **Helper Pattern** (Legacy) - Uses `mod_*.php` entry point with explicit require
 
-Both are valid; choose based on your needs. The Dispatcher pattern is what Joomla core uses.
+**Use the Dispatcher pattern for new modules.** It's the modern Joomla 5 approach and has been battle-tested through painful trial and error. The Helper pattern is documented for reference when working with existing modules.
 
 ---
 
@@ -528,9 +528,9 @@ Look for `D....` markers indicating proper directory entries:
 
 ---
 
-## Pattern 2: Helper Pattern (Traditional)
+## Pattern 2: Helper Pattern (Legacy)
 
-This pattern uses an entry point file with explicit `require_once`. It's simpler and works reliably across all hosting environments.
+This older pattern uses an entry point file with explicit `require_once`. Documented here for reference when maintaining existing modules, but **use the Dispatcher pattern for new development**.
 
 ### File Structure
 
