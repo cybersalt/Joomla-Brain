@@ -87,35 +87,68 @@ class Element extends CMSPlugin implements SubscriberInterface {
 
 ## Joomla 5 Module Pattern
 
-### File Structure
+**RECOMMENDED: Dispatcher Pattern** (no entry point file needed)
+
+### File Structure (Dispatcher Pattern)
 ```
 mod_modulename/
 ├── mod_modulename.xml
-├── mod_modulename.php      # Entry point with explicit require_once
-├── src/Site/Helper/ModulenameHelper.php  # MUST be in Site subfolder!
+├── services/provider.php           # DI service provider
+├── src/Dispatcher/Dispatcher.php   # NOT src/Site/Dispatcher!
 ├── tmpl/default.php
 └── language/en-GB/mod_modulename.ini
 ```
 
-### Entry Point (mod_modulename.php)
+### Service Provider (services/provider.php)
 ```php
 <?php
 \defined('_JEXEC') or die;
-use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\CMS\Extension\Service\Provider\Module;
+use Joomla\CMS\Extension\Service\Provider\ModuleDispatcherFactory;
+use Joomla\DI\Container;
+use Joomla\DI\ServiceProviderInterface;
 
-// CRITICAL: Explicit require - autoloader unreliable for modules
-require_once __DIR__ . '/src/Site/Helper/ModulenameHelper.php';
-
-$items = ModulenameHelper::getItems($params);
-$moduleclass_sfx = htmlspecialchars($params->get('moduleclass_sfx', ''), ENT_COMPAT, 'UTF-8');
-
-require ModuleHelper::getLayoutPath('mod_modulename', $params->get('layout', 'default'));
+return new class implements ServiceProviderInterface {
+    public function register(Container $container): void {
+        $container->registerServiceProvider(new ModuleDispatcherFactory('\\YourNamespace\\Module\\ModuleName'));
+        $container->registerServiceProvider(new Module());
+    }
+};
 ```
 
-### Helper Namespace
+### Dispatcher Class (src/Dispatcher/Dispatcher.php)
 ```php
-namespace YourNamespace\Module\ModuleName\Site\Helper;
-// Note: MUST include "Site" in namespace path
+<?php
+namespace YourNamespace\Module\ModuleName\Site\Dispatcher;  // Site auto-added!
+\defined('_JEXEC') or die;
+use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
+
+class Dispatcher extends AbstractModuleDispatcher {
+    protected function getLayoutData(): array {
+        $data = parent::getLayoutData();
+        $params = $data['params'];
+        $data['items'] = $this->buildItems($params);
+        return $data;
+    }
+}
+```
+
+**CRITICAL**: Namespace includes `\Site\Dispatcher` but file is at `src/Dispatcher/` - Joomla auto-adds `Site`.
+
+### Manifest (files section)
+```xml
+<files>
+    <folder module="mod_modulename">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+</files>
+```
+
+### Legacy Helper Pattern (for existing modules)
+```
+mod_modulename/
+├── mod_modulename.php      # Entry point with explicit require_once
+├── src/Site/Helper/ModulenameHelper.php  # MUST be in Site subfolder!
 ```
 
 ---
@@ -208,6 +241,47 @@ if (preg_match('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $content, $matches))
     <option value="1">JYES</option>
     <option value="0">JNO</option>
 </field>
+```
+
+### Subform Fields (Repeatable/Sortable)
+```xml
+<field name="items" type="subform" multiple="true"
+    layout="joomla.form.field.subform.repeatable"
+    buttons="add,remove,move" max="50">
+    <form>
+        <field name="type" type="list" default="preset">
+            <option value="preset">Preset</option>
+            <option value="custom">Custom</option>
+        </field>
+        <field name="preset_value" type="list" showon="type:preset">...</field>
+        <field name="custom_value" type="text" showon="type:custom"/>
+    </form>
+</field>
+```
+- `buttons="add,remove,move"` enables drag-and-drop reordering
+- Process in Dispatcher: `$params->get('items', [])` returns array of objects
+
+### Grouped List Fields (Optgroups)
+```xml
+<field name="location" type="groupedlist" label="Location">
+    <group label="North America">
+        <option value="us">United States</option>
+        <option value="ca">Canada</option>
+    </group>
+    <group label="Europe">
+        <option value="uk">United Kingdom</option>
+    </group>
+</field>
+```
+**IMPORTANT**: Do NOT use `list` with `fancy-select` for grouped options - Choices.js doesn't handle disabled separators. Use `groupedlist` for proper `<optgroup>` rendering.
+
+### Conditional Field Display (showon)
+```xml
+<field name="details" showon="show_details:1" ... />
+<field name="options" showon="type:a,b" ... />           <!-- OR values -->
+<field name="other" showon="type!:disabled" ... />       <!-- NOT equal -->
+<field name="adv" showon="show:1[AND]level:expert" ... /><!-- AND -->
+<field name="either" showon="type:a[OR]type:b" ... />    <!-- OR conditions -->
 ```
 
 ---

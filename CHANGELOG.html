@@ -1,10 +1,60 @@
 <div class="changelog-container">
-    <h1>📋 Joomla Brain - Changelog</h1>
+    <h1>Joomla Brain - Changelog</h1>
 
     <div class="intro">
         <p><strong>All notable changes to Joomla Brain will be documented in this file.</strong></p>
         <p>The format is based on <a href="https://keepachangelog.com/en/1.0.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
     </div>
+
+    <h2>
+        <span class="version-badge">v1.2.0</span>
+        <span class="date">2025-12-18</span>
+    </h2>
+
+    <h3><span class="section-icon">🚀</span> New Features</h3>
+    <ul>
+        <li><strong>Module Guide - Subform Fields</strong>: Added comprehensive documentation for repeatable/sortable subform fields
+            <ul>
+                <li><code>buttons="add,remove,move"</code> for drag-and-drop reordering</li>
+                <li>Processing subform data in Dispatcher with type switching</li>
+                <li>Combining with <code>showon</code> for conditional nested fields</li>
+            </ul>
+        </li>
+        <li><strong>Module Guide - Grouped List Fields</strong>: Added <code>groupedlist</code> field type documentation
+            <ul>
+                <li>Renders proper HTML <code>&lt;optgroup&gt;</code> elements</li>
+                <li>Warning about <code>fancy-select</code> not supporting grouped options properly - Choices.js doesn't handle disabled separator options</li>
+            </ul>
+        </li>
+        <li><strong>Module Guide - Conditional Fields (showon)</strong>: Added complete showon attribute documentation
+            <ul>
+                <li>Basic value matching: <code>showon="field:value"</code></li>
+                <li>Multiple values (OR): <code>showon="field:a,b"</code></li>
+                <li>Negation: <code>showon="field!:value"</code></li>
+                <li>AND/OR conditions: <code>[AND]</code> and <code>[OR]</code> operators</li>
+            </ul>
+        </li>
+        <li><strong>Module Guide - Live Preview</strong>: Added admin form live preview techniques
+            <ul>
+                <li>MutationObserver for catching Joomla's dynamic form field updates</li>
+                <li>Click/change/input events for immediate response on form inputs</li>
+                <li>Polling fallback for color pickers and other widgets that don't fire standard events</li>
+            </ul>
+        </li>
+        <li><strong>Joomla Skill - Dispatcher Pattern</strong>: Updated module section to recommend Dispatcher pattern over Helper pattern
+            <ul>
+                <li>Complete service provider example</li>
+                <li>Namespace mapping explanation (Site auto-added by Joomla)</li>
+                <li>Manifest files section for Dispatcher modules</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h3><span class="section-icon">📝</span> Documentation</h3>
+    <ul>
+        <li>Updated JOOMLA5-MODULE-GUIDE.md with learnings from cs-world-clocks module development</li>
+        <li>Updated joomla-development.md skill with subform, groupedlist, showon, and Dispatcher pattern</li>
+    </ul>
 
     <h2>
         <span class="version-badge">v1.1.0</span>
