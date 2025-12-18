@@ -427,6 +427,127 @@ Always use the fancy-select layout for multi-select fields:
 </field>
 ```
 
+### Subform Fields (Repeatable/Sortable Items)
+
+Use subform for lists of items that users can add, remove, and reorder:
+
+```xml
+<field
+    name="items"
+    type="subform"
+    label="MOD_EXAMPLE_FIELD_ITEMS_LABEL"
+    description="MOD_EXAMPLE_FIELD_ITEMS_DESC"
+    multiple="true"
+    layout="joomla.form.field.subform.repeatable"
+    buttons="add,remove,move"
+    max="50"
+>
+    <form>
+        <field
+            name="item_type"
+            type="list"
+            label="MOD_EXAMPLE_FIELD_TYPE_LABEL"
+            default="preset"
+        >
+            <option value="preset">MOD_EXAMPLE_TYPE_PRESET</option>
+            <option value="custom">MOD_EXAMPLE_TYPE_CUSTOM</option>
+        </field>
+
+        <field
+            name="preset_value"
+            type="list"
+            label="MOD_EXAMPLE_FIELD_PRESET_LABEL"
+            showon="item_type:preset"
+        >
+            <option value="option1">Option 1</option>
+            <option value="option2">Option 2</option>
+        </field>
+
+        <field
+            name="custom_value"
+            type="text"
+            label="MOD_EXAMPLE_FIELD_CUSTOM_LABEL"
+            showon="item_type:custom"
+        />
+    </form>
+</field>
+```
+
+**Key attributes**:
+- `buttons="add,remove,move"` - Enables drag-and-drop reordering with move handles
+- `layout="joomla.form.field.subform.repeatable"` - Modern repeatable layout
+- `showon="field_name:value"` - Conditionally show/hide fields based on another field's value
+- `max="50"` - Maximum number of items allowed
+
+**Processing subform data in Dispatcher**:
+
+```php
+$itemsData = $params->get('items', []);
+$items = [];
+
+foreach ($itemsData as $item) {
+    $type = $item->item_type ?? 'preset';
+
+    if ($type === 'preset') {
+        $items[] = [
+            'value' => $item->preset_value,
+            'type' => 'preset'
+        ];
+    } else {
+        $items[] = [
+            'value' => $item->custom_value,
+            'type' => 'custom'
+        ];
+    }
+}
+```
+
+### Grouped List Fields (Optgroups)
+
+Use `groupedlist` type when you need dropdown options organized into sections:
+
+```xml
+<field
+    name="location"
+    type="groupedlist"
+    label="MOD_EXAMPLE_FIELD_LOCATION_LABEL"
+>
+    <group label="North America">
+        <option value="us">United States</option>
+        <option value="ca">Canada</option>
+        <option value="mx">Mexico</option>
+    </group>
+    <group label="Europe">
+        <option value="uk">United Kingdom</option>
+        <option value="de">Germany</option>
+        <option value="fr">France</option>
+    </group>
+</field>
+```
+
+**IMPORTANT**: Do NOT use `list` type with `layout="joomla.form.field.list-fancy-select"` for grouped options. The Choices.js fancy-select doesn't properly handle disabled separator options. Use `groupedlist` which renders native HTML `<optgroup>` elements.
+
+### Conditional Field Display (showon)
+
+The `showon` attribute hides/shows fields based on other field values:
+
+```xml
+<!-- Show when another field equals a specific value -->
+<field name="details" showon="show_details:1" ... />
+
+<!-- Show when field equals one of multiple values -->
+<field name="options" showon="type:option1,option2" ... />
+
+<!-- Show when field does NOT equal a value -->
+<field name="other" showon="type!:disabled" ... />
+
+<!-- Multiple conditions (AND) -->
+<field name="advanced" showon="show_advanced:1[AND]level:expert" ... />
+
+<!-- Multiple conditions (OR) -->
+<field name="either" showon="type:a[OR]type:b" ... />
+```
+
 ### Custom CSS Field (REQUIRED)
 
 Per Joomla Brain standards, all modules MUST include a custom CSS field:
@@ -469,6 +590,74 @@ For Joomla's Atum admin template dark mode:
 ```css
 background: var(--atum-bg-dark, var(--body-bg, #fafafa));
 ```
+
+## Live Preview in Admin Forms
+
+For modules with styling options, implement live preview using a combination of techniques:
+
+### HTML Preview Element
+
+Add a spacer field with preview HTML in your manifest:
+
+```xml
+<field
+    name="style_preview"
+    type="spacer"
+    label="MOD_EXAMPLE_PREVIEW_HTML"
+/>
+```
+
+Language string with embedded HTML:
+
+```ini
+MOD_EXAMPLE_PREVIEW_HTML="<div id='mod-example-preview' style='padding:20px;border:1px solid #ddd;border-radius:8px;margin:10px 0;'><div class='preview-element'>Preview Content</div></div>"
+```
+
+### JavaScript Live Preview
+
+Use MutationObserver + click events + polling for reliable updates:
+
+```javascript
+document.addEventListener('DOMContentLoaded', function() {
+    const preview = document.getElementById('mod-example-preview');
+    if (!preview) return;
+
+    function updatePreview() {
+        // Get current form values
+        const bgColor = document.querySelector('[name="jform[params][bg_color]"]')?.value || '';
+        const fontSize = document.querySelector('[name="jform[params][font_size]"]')?.value || '';
+
+        // Apply to preview element
+        if (bgColor) preview.style.backgroundColor = bgColor;
+        if (fontSize) preview.querySelector('.preview-element').style.fontSize = fontSize;
+    }
+
+    // Method 1: MutationObserver for DOM changes
+    const observer = new MutationObserver(updatePreview);
+    const form = document.querySelector('#module-form');
+    if (form) {
+        observer.observe(form, { childList: true, subtree: true, attributes: true });
+    }
+
+    // Method 2: Click events on inputs
+    document.querySelectorAll('.options-form input, .options-form select').forEach(el => {
+        el.addEventListener('click', () => setTimeout(updatePreview, 100));
+        el.addEventListener('change', updatePreview);
+        el.addEventListener('input', updatePreview);
+    });
+
+    // Method 3: Polling fallback (for color pickers and other widgets)
+    setInterval(updatePreview, 500);
+
+    // Initial update
+    updatePreview();
+});
+```
+
+**Why all three methods?**
+- **MutationObserver**: Catches Joomla's dynamic form field updates
+- **Click events**: Immediate response for simple inputs
+- **Polling**: Catches color picker updates and other widgets that don't fire standard events
 
 ## Package Building
 

@@ -14,7 +14,15 @@
       "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" rm --cached .claude/settings.local.json)",
       "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" add .claude/settings.local.json)",
       "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nNormalize line endings for Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nUse CRLF line endings for Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git -C \"e:/OneDrive/Documents/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nUse CRLF line endings for Claude settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(mv:*)",
+      "Bash(git -C \"e:/github/Joomla-Brain\" rebase --abort)",
+      "Bash(git -C \"e:/github/Joomla-Brain\" add JOOMLA5-MODULE-GUIDE.md)",
+      "Bash(git -C \"e:/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nMerge module guide: add Helper pattern alongside Dispatcher pattern\n\nBoth Joomla 5 module patterns are now documented:\n- Dispatcher pattern (modern, DI-based, no entry point)\n- Helper pattern (traditional, explicit require_once)\n\nAlso adds: page context detection, dynamic inline styles, URL building\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/github/Joomla-Brain\" status)",
+      "Bash(git -C \"e:/github/Joomla-Brain\" diff JOOMLA5-MODULE-GUIDE.md)",
+      "Bash(git -C \"e:/github/Joomla-Brain\" commit -m \"$(cat <<''EOF''\nClarify Dispatcher as recommended pattern, Helper as legacy\n\n- Dispatcher pattern is battle-tested and what Joomla core uses\n- Helper pattern documented for maintaining existing modules only\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git -C \"e:/github/Joomla-Brain\" push)"
     ],
     "deny": [],
     "ask": []
