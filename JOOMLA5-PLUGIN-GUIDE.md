@@ -427,6 +427,140 @@ Allow users to select a custom field from a dropdown in plugin settings:
 2. Delete cache file and reinstall
 3. Verify all three locations use identical namespace
 
+### AJAX Handler Returns Blank Page
+**Cause**: Using `SubscriberInterface` but returning string instead of setting result on Event
+**Fix**:
+1. Add `use Joomla\Event\Event;`
+2. Change method signature to accept `Event $event` parameter
+3. Use `$event->addResult($result)` instead of `return $result`
+4. Ensure event is listed in `getSubscribedEvents()` array
+
+### AJAX Handler Not Being Called
+**Cause**: Event not subscribed when using `SubscriberInterface`
+**Fix**: Add the AJAX event to `getSubscribedEvents()`:
+```php
+'onAjaxMyplugin' => 'onAjaxMyplugin',
+```
+
+### "Call to undefined method getMode()"
+**Cause**: `AdministratorRouter` doesn't have `getMode()` method (only `SiteRouter` does)
+**Fix**: Use `method_exists()` check before calling router-specific methods:
+```php
+if (method_exists($router, 'getMode')) {
+    $mode = $router->getMode();
+}
+```
+
+---
+
+## AJAX Handlers with com_ajax (CRITICAL for SubscriberInterface)
+
+When using plugins with `SubscriberInterface` that need AJAX endpoints via `com_ajax`, you **cannot** simply return a string. The result must be set on the Event object.
+
+### The Problem
+
+```php
+// THIS DOES NOT WORK - returns blank page!
+public function onAjaxMyplugin(): string
+{
+    return json_encode(['success' => true]);
+}
+```
+
+### The Solution
+
+1. **Import the Event class**
+2. **List the event in `getSubscribedEvents()`**
+3. **Accept Event parameter and set result on it**
+
+```php
+use Joomla\Event\Event;
+
+public static function getSubscribedEvents(): array
+{
+    return [
+        'onContentPrepare' => 'onContentPrepare',
+        'onAjaxMyplugin'   => 'onAjaxMyplugin',  // MUST be listed!
+    ];
+}
+
+public function onAjaxMyplugin(Event $event): void
+{
+    $app = Factory::getApplication();
+
+    // Security checks
+    if (!$app->isClient('administrator')) {
+        $this->setAjaxResult($event, json_encode(['error' => 'Access denied']));
+        return;
+    }
+
+    if (!Session::checkToken('get') && !Session::checkToken('post')) {
+        $this->setAjaxResult($event, json_encode(['error' => 'Invalid token']));
+        return;
+    }
+
+    $result = json_encode(['success' => true, 'data' => 'Hello World']);
+    $this->setAjaxResult($event, $result);
+}
+
+/**
+ * Helper method to set AJAX result on event (J4/J5 compatible)
+ */
+private function setAjaxResult(Event $event, string $result): void
+{
+    if (method_exists($event, 'addResult')) {
+        $event->addResult($result);
+    } else {
+        $results = $event->getArgument('result', []);
+        $results[] = $result;
+        $event->setArgument('result', $results);
+    }
+}
+```
+
+### URL Format for com_ajax Plugin Calls
+
+```
+index.php?option=com_ajax&plugin=myplugin&group=system&format=raw&{token}=1
+```
+
+- `plugin` = plugin element name (lowercase)
+- `group` = plugin group (system, content, etc.)
+- `format=raw` for unformatted output
+- Include CSRF token for security
+
+---
+
+## Standard Log Viewer Implementation
+
+**For CyberSalt Extensions**: All extensions with logging MUST use a consistent log viewer UI for user familiarity.
+
+### Required Components
+
+1. **Custom Form Field** for admin settings buttons:
+   - `src/Field/ViewerbuttonField.php` (note: lowercase 'b' for Joomla field loading)
+   - Displays: View Log, Download Log, Test Logging buttons
+
+2. **AJAX Actions**:
+   - `view` - Return log entries as JSON with pagination
+   - `stats` - Return log statistics
+   - `clear` - Archive and clear log file
+   - `download` - Download raw log file
+   - `viewer` - Return full HTML viewer
+   - `test` - Diagnostic test of logging functionality
+
+3. **Viewer Template** (`tmpl/viewer.php`):
+   - Dark theme with CSS variables
+   - Stats bar (entries, requests, size, warnings, errors)
+   - Filters (request ID, event type, entry limit)
+   - Button bar: Refresh, Dump Log, Download, Clear
+   - Expandable log entries with JSON syntax highlighting
+   - Stack trace display
+
+### Reference Implementation
+
+See [cs-joomla-router-tracer](https://github.com/cybersalt/cs-joomla-router-tracer) for the canonical implementation.
+
 ---
 
 ## Example Repositories

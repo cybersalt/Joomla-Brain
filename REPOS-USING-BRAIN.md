@@ -8,6 +8,9 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
 | [cs-autogallery](https://github.com/cybersalt/cs-autogallery) | Content Plugin | Bootstrap 5 gallery with GLightbox | Joomla 5 native (services/provider) |
+| [cs-joomla-router-tracer](https://github.com/cybersalt/cs-joomla-router-tracer) | System Plugin | Router/URL logging for debugging redirect loops | Joomla 5 native (SubscriberInterface, com_ajax) |
+| [cs-browser-page-title](https://github.com/cybersalt/cs-browser-page-title) | System Plugin | Sets browser title from custom field | Joomla 5 native (services/provider) |
+| [cs-userback-admin](https://github.com/cybersalt/cs-userback-admin) | System Plugin | Userback integration with frontend/backend detection | Joomla 5 native |
 
 ### Packages
 | Repo | Type | Description | Status |
@@ -25,6 +28,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
 | [cybersalt-related-articles](https://github.com/cybersalt/cybersalt-related-articles) | Module | Related articles display | Joomla 5 |
+| [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) | Module | World clocks display | Joomla 5 native (Dispatcher pattern) |
 
 ## Adding This Submodule
 
@@ -48,3 +52,16 @@ git commit -m "Update Joomla Brain submodule"
 - **Joomla 5 native** = services/provider.php with DI container and SubscriberInterface
 - Both formats work in Joomla 5 due to backward compatibility
 - Joomla 6 will require the native format (legacy deprecated)
+
+## Standards
+
+### Log Viewer UI
+All CyberSalt extensions with logging MUST use the standard log viewer implementation for consistent user experience. Reference implementation: [cs-joomla-router-tracer](https://github.com/cybersalt/cs-joomla-router-tracer)
+
+Required features:
+- Dark theme with CSS variables
+- Button bar: Refresh, Dump Log (clipboard), Download, Clear
+- Stats bar with entry counts, file size, warnings/errors
+- Filterable log entries with expandable details
+- JSON syntax highlighting
+- Stack trace display
