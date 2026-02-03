@@ -5,6 +5,13 @@ All notable changes to Joomla Brain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-02-03
+
+### 🔧 Improvements
+- **Joomla Skill - Cache Busting**: Enhanced cache busting documentation with timestamp pattern for development
+  - Use `date('YmdHis')` during development for auto-refresh on every page load
+  - Switch to static version number for production releases
+
 ## [1.2.0] - 2025-12-18
 
 ### 🚀 New Features

@@ -394,10 +394,16 @@ Style icons with CSS:
 ### Cache Busting
 Add version parameter to prevent stale CSS/JS:
 ```php
-$assetVersion = '1.0.0';  // Bump on each release
+// DEVELOPMENT: Use timestamp for auto-refresh on every request
+$assetVersion = date('YmdHis');
+
+// PRODUCTION: Use static version number for releases
+$assetVersion = '1.0.0';
+
 $document->addStyleSheet('components/com_example/css/style.css?v=' . $assetVersion);
 $document->addScript('components/com_example/js/script.js?v=' . $assetVersion);
 ```
+**Tip:** During development, use `date('YmdHis')` to automatically bust the cache on each page load. Switch to a static version number before building the release package.
 
 ### Table Styling Pattern
 ```css
