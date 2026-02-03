@@ -155,6 +155,21 @@ mod_modulename/
 
 ## Packaging (CRITICAL)
 
+### Package Naming Convention (MANDATORY)
+**ALWAYS include version AND timestamp** in package filenames for sorting:
+
+```
+{extension_name}_v{version}_{YYYYMMDD}_{HHMM}.zip
+```
+
+**Examples:**
+- `com_csdiskusage_v1.0.0_20260203_1425.zip`
+- `plg_system_routertracer_v1.2.0_20260203_0930.zip`
+- `mod_worldclocks_v2.1.0_20260203_1600.zip`
+- `pkg_stageit_v6.0.0_20260203_1045.zip`
+
+This ensures files sort chronologically and you can instantly identify the latest build.
+
 ### Use 7-Zip Only
 Windows PowerShell `Compress-Archive` and .NET `ZipFile` do NOT create proper directory entries. This causes Joomla installer failures.
 
@@ -176,7 +191,6 @@ Set-Location 'build_folder'
 ### Build Workflow
 - Create packages in repository ROOT, not `dist/` or `build/`
 - Delete previous versions before building
-- Include timestamp: `pkg_name_v1.0.0_2025-01-15_1430.zip`
 - **CRITICAL:** Rebuild package after EVERY code change before testing
 
 ---

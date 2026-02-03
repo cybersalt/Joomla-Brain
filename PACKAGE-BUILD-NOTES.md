@@ -1,5 +1,26 @@
 # Joomla 5 Plugin Package Build Notes
 
+## Package Naming Convention
+
+**ALWAYS include version number AND timestamp in package filenames** for easy sorting and identification of the latest build:
+
+```
+{extension_name}_v{version}_{YYYYMMDD}_{HHMM}.zip
+```
+
+**Examples:**
+- `com_csdiskusage_v1.0.0_20260203_1425.zip`
+- `plg_system_routertracer_v1.2.0_20260203_0930.zip`
+- `mod_worldclocks_v2.1.0_20260203_1600.zip`
+
+**Why timestamps matter:**
+- Sorts chronologically in file explorers
+- Instantly identifies the most recent build
+- Prevents confusion when testing multiple iterations
+- Helps track which build is installed on a site
+
+---
+
 ## CRITICAL: Use 7-Zip for Creating ZIP Packages
 
 **Windows PowerShell's `Compress-Archive` and .NET's `ZipFile.CreateFromDirectory` do NOT create proper directory entries in ZIP files.** This causes Joomla installer to fail with:
