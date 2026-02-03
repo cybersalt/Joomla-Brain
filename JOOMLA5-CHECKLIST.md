@@ -301,19 +301,53 @@ private function loadFreshParams(): void
 
 ## Dark Mode Compatibility
 
-### CSS Variables for Atum Template
-```css
-/* Background that works in both modes */
-background: var(--atum-bg-dark, var(--body-bg, #fafafa));
+### CRITICAL: Use Atum Native Styling
 
-/* Border colors */
-border: 1px solid var(--template-bg-dark-7, #ddd);
+**DO NOT** try to control colors in your extension CSS. Let Atum handle dark/light mode automatically.
+
+**Wrong approach:**
+```css
+/* DON'T DO THIS - causes white boxes and color conflicts */
+background: var(--atum-bg-dark, var(--template-bg-dark-3, #e9ecef));
+color: #495057;
+```
+
+**Correct approach:**
+```css
+/* Let colors inherit from Atum - don't set them at all */
+/* Only set structural properties like padding, margin, display */
+padding: 0.75rem;
+margin-bottom: 1rem;
+```
+
+### What You CAN Style
+- Padding, margins, spacing
+- Display properties (flex, grid, etc.)
+- Font sizes
+- Borders (use `currentColor` or inherit)
+- Native form elements with `accent-color`
+
+### What You Should NOT Style
+- Background colors
+- Text colors
+- Alert/warning colors (use Bootstrap classes: `alert alert-warning`)
+- Table row backgrounds (use Bootstrap `table` class)
+
+### Native Checkbox Styling
+```css
+/* Use accent-color for native checkboxes */
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--link-color, #0d6efd);
+}
 ```
 
 ### Testing
 - Toggle dark mode in Joomla admin (user menu > template style)
 - Check all form elements, backgrounds, and text colors
 - Ensure checkboxes and inputs are visible in both modes
+- Verify no "white boxes" appear in dark mode
 
 ---
 
@@ -417,6 +451,77 @@ Use existing Joomla constants:
 - `COM_MODULES_FIELD_MODULECLASS_SFX_LABEL` for module class suffix
 
 See the [Language System Requirements](README.md#language-system-requirements) section in README.md for complete documentation.
+
+---
+
+## Joomla 5 Core Database Tables
+
+Joomla 5 installs 75 core tables. When building extensions that work with database tables (backup tools, staging tools, migration), use this reference to identify core vs third-party tables.
+
+### Table Naming Convention
+
+Joomla tables follow the pattern: `{prefix}_{extension}_{tablename}`
+- `{prefix}` = Site-specific prefix (e.g., `jos_`, `j5_`)
+- `{extension}` = Extension identifier (e.g., `content`, `users`, `finder`)
+- `{tablename}` = Specific table name
+
+Third-party extensions typically follow: `{prefix}_{extensionname}_{tablename}` (e.g., `jos_virtuemart_products`)
+
+### Core Table Groups (Joomla 5.2+)
+
+**Joomla Core** (21 tables):
+`assets`, `associations`, `banners`, `banner_clients`, `banner_tracks`, `extensions`, `languages`, `mail_templates`, `messages`, `messages_cfg`, `newsfeeds`, `overrider`, `postinstall_messages`, `schemas`, `session`, `tuf_metadata`, `ucm_base`, `ucm_content`, `updates`, `update_sites`, `update_sites_extensions`
+
+**Joomla Content** (12 tables):
+`categories`, `content`, `contentitem_tag_map`, `content_frontpage`, `content_rating`, `content_types`, `history`, `tags`, `redirect_links`, `menu`, `menu_types`, `schemaorg`
+
+**Joomla Users** (10 tables):
+`contact_details`, `usergroups`, `users`, `user_keys`, `user_mfa`, `user_notes`, `user_profiles`, `user_usergroup_map`, `viewlevels`, `webauthn_credentials`
+
+**Joomla Templates and Layout** (4 tables):
+`template_overrides`, `template_styles`, `modules`, `modules_menu`
+
+**Joomla Smart Search / Finder** (11 tables):
+`finder_filters`, `finder_links`, `finder_links_terms`, `finder_logging`, `finder_taxonomy`, `finder_taxonomy_map`, `finder_terms`, `finder_terms_common`, `finder_tokens`, `finder_tokens_aggregate`, `finder_types`
+
+**Joomla Workflows** (4 tables) - *New in J4*:
+`workflows`, `workflow_associations`, `workflow_stages`, `workflow_transitions`
+
+**Joomla Custom Fields** (4 tables) - *New in J3.7+*:
+`fields`, `fields_categories`, `fields_groups`, `fields_values`
+
+**Joomla Privacy and Logging** (6 tables) - *New in J3.9+/J4*:
+`action_logs`, `action_log_config`, `action_logs_extensions`, `action_logs_users`, `privacy_consents`, `privacy_requests`
+
+**Joomla Scheduler** (1 table) - *New in J4*:
+`scheduler_tasks`
+
+**Joomla Guided Tours** (2 tables) - *New in J4*:
+`guidedtours`, `guidedtour_steps`
+
+### Tables Removed in Joomla 4/5
+
+These tables existed in Joomla 3.x but were removed or renamed:
+- `core_log_searches` - Removed
+- `sections` - Removed (legacy from J1.5)
+- `weblinks` - Moved to separate extension
+- `ucm_history` - Renamed to `history`
+- `banner`, `bannertrack`, `bannerclient` - Renamed to `banners`, `banner_tracks`, `banner_clients`
+- `finder_links_terms0` through `finder_links_termsf` - Consolidated to single `finder_links_terms`
+
+### Programmatic Table Detection
+
+To get all tables for a database prefix:
+```php
+use Joomla\CMS\Factory;
+
+$db = Factory::getDbo();
+$prefix = $db->getPrefix();
+$tables = $db->getTableList();
+
+// Filter to only this site's tables
+$siteTables = array_filter($tables, fn($t) => str_starts_with($t, $prefix));
+```
 
 ---
 

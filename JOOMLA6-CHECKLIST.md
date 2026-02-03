@@ -48,5 +48,66 @@
 - [ ] Use semantic versioning (MAJOR.MINOR.PATCH)
 - [ ] Maintain a development checklist for each Joomla version
 
+## Dark Mode / Light Mode Compatibility (Atum Template)
+
+Joomla 6 uses the Atum admin template with Bootstrap 5 CSS variables for dark/light mode. Follow these patterns:
+
+### CSS Variables to Use
+```css
+/* Colors - use CSS variables, NOT hardcoded values */
+color: var(--bs-body-color, #212529);
+background: var(--bs-body-bg, #fff);
+border-color: var(--bs-border-color, #dee2e6);
+
+/* Table alternating rows */
+background: var(--bs-tertiary-bg, #f8f9fa);
+
+/* Table hover */
+background: var(--bs-secondary-bg, #e9ecef);
+```
+
+### Typography - Inherit from Atum
+```css
+/* DO use rem units and inherit fonts */
+font-size: 0.875rem;
+font-family: inherit;
+line-height: 1.5;
+
+/* DON'T hardcode fonts */
+font: 11px Arial, sans-serif; /* BAD */
+```
+
+### Dark Mode Detection
+```css
+/* Joomla uses both data attributes */
+html[data-bs-theme="dark"] body.admin.com_yourext { ... }
+html[data-color-scheme="dark"] body.admin.com_yourext { ... }
+```
+
+### Icons - Use Joomla Icon Fonts (NOT image files)
+```php
+// Use Joomla's icon classes (Font Awesome subset)
+<span class="icon-trash" aria-hidden="true"></span>    // Delete
+<span class="icon-refresh" aria-hidden="true"></span>  // Restore/Refresh
+<span class="icon-save" aria-hidden="true"></span>     // Save
+<span class="icon-edit" aria-hidden="true"></span>     // Edit
+<span class="icon-plus" aria-hidden="true"></span>     // Add
+<span class="icon-minus" aria-hidden="true"></span>    // Remove
+```
+
+### Cache Busting for CSS/JS
+```php
+$assetVersion = '1.0.0';
+$document->addStyleSheet('components/com_example/css/style.css?v=' . $assetVersion);
+$document->addScript('components/com_example/js/script.js?v=' . $assetVersion);
+```
+
+## Joomla 6 Database Schema
+
+**Joomla 6 has the same 76 tables as Joomla 5** - no tables added or removed.
+
+Only schema change in Joomla 6:
+- `#__history` table: Added `is_current` and `is_legacy` columns (TINYINT)
+
 ## Compatibility Notes
 - These best practices are for Joomla 5 and Joomla 6. Older versions (Joomla 3/4) require different patterns and libraries.

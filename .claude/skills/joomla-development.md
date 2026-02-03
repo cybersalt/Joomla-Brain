@@ -286,6 +286,141 @@ if (preg_match('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $content, $matches))
 
 ---
 
+## Joomla 5 Core Database Tables
+
+When building extensions that work with database tables (backup, staging, migration tools), use this reference.
+
+### Table Naming Convention
+- Joomla tables: `{prefix}_{extension}_{tablename}` (e.g., `jos_content`, `jos_users`)
+- Third-party: `{prefix}_{extensionname}_{tablename}` (e.g., `jos_virtuemart_products`)
+
+### Core Table Groups (75 tables in Joomla 5.2+)
+
+| Group | Tables |
+|-------|--------|
+| **Core** (21) | assets, associations, banners, banner_clients, banner_tracks, extensions, languages, mail_templates, messages, messages_cfg, newsfeeds, overrider, postinstall_messages, schemas, session, tuf_metadata, ucm_base, ucm_content, updates, update_sites, update_sites_extensions |
+| **Content** (12) | categories, content, contentitem_tag_map, content_frontpage, content_rating, content_types, history, tags, redirect_links, menu, menu_types, schemaorg |
+| **Users** (10) | contact_details, usergroups, users, user_keys, user_mfa, user_notes, user_profiles, user_usergroup_map, viewlevels, webauthn_credentials |
+| **Templates** (4) | template_overrides, template_styles, modules, modules_menu |
+| **Smart Search** (11) | finder_filters, finder_links, finder_links_terms, finder_logging, finder_taxonomy, finder_taxonomy_map, finder_terms, finder_terms_common, finder_tokens, finder_tokens_aggregate, finder_types |
+| **Workflows** (4) | workflows, workflow_associations, workflow_stages, workflow_transitions |
+| **Custom Fields** (4) | fields, fields_categories, fields_groups, fields_values |
+| **Privacy/Logging** (6) | action_logs, action_log_config, action_logs_extensions, action_logs_users, privacy_consents, privacy_requests |
+| **Scheduler** (1) | scheduler_tasks |
+| **Guided Tours** (2) | guidedtours, guidedtour_steps |
+
+### Tables Removed in J4/J5
+- `core_log_searches`, `sections`, `weblinks` - Removed
+- `ucm_history` → `history` - Renamed
+- `banner/bannertrack/bannerclient` → `banners/banner_tracks/banner_clients` - Renamed
+- `finder_links_terms0-f` → `finder_links_terms` - Consolidated
+
+### Programmatic Table Detection
+```php
+$db = Factory::getDbo();
+$tables = array_filter($db->getTableList(), fn($t) => str_starts_with($t, $db->getPrefix()));
+```
+
+---
+
+## Dark Mode / Atum Template Styling
+
+**CRITICAL:** Use CSS variables for colors - hardcoded colors break dark mode.
+
+### CSS Variables Reference
+```css
+/* Text and backgrounds */
+color: var(--bs-body-color, #212529);
+background: var(--bs-body-bg, #fff);
+border-color: var(--bs-border-color, #dee2e6);
+
+/* Table styling */
+background: var(--bs-tertiary-bg, #f8f9fa);  /* Alternating rows */
+background: var(--bs-secondary-bg, #e9ecef); /* Hover state */
+
+/* Links */
+color: var(--link-color, #0d6efd);
+```
+
+### Typography - Use rem and inherit
+```css
+/* GOOD - inherits from Atum */
+font-size: 0.875rem;
+font-family: inherit;
+line-height: 1.5;
+color: var(--bs-body-color);
+
+/* BAD - hardcoded values */
+font: 11px Arial, sans-serif;
+color: #333;
+```
+
+### Dark/Light Mode Selectors
+```css
+/* Must support BOTH selectors - Joomla uses both */
+html[data-bs-theme="dark"] body.admin.com_yourext { ... }
+html[data-color-scheme="dark"] body.admin.com_yourext { ... }
+
+html[data-bs-theme="light"] body.admin.com_yourext { ... }
+html[data-color-scheme="light"] body.admin.com_yourext { ... }
+```
+
+### Icons - Use Joomla Icon Fonts
+**DON'T use image files** - they don't adapt to dark mode and may be missing.
+```html
+<!-- Joomla's icon classes (Font Awesome subset) -->
+<span class="icon-trash" aria-hidden="true"></span>     <!-- Delete -->
+<span class="icon-refresh" aria-hidden="true"></span>   <!-- Restore -->
+<span class="icon-save" aria-hidden="true"></span>      <!-- Save -->
+<span class="icon-edit" aria-hidden="true"></span>      <!-- Edit -->
+<span class="icon-plus" aria-hidden="true"></span>      <!-- Add -->
+<span class="icon-minus" aria-hidden="true"></span>     <!-- Remove -->
+<span class="icon-eye" aria-hidden="true"></span>       <!-- View -->
+<span class="icon-download" aria-hidden="true"></span>  <!-- Download -->
+```
+
+Style icons with CSS:
+```css
+.my-delete-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc3545;  /* Bootstrap danger red */
+    font-size: 16px;
+}
+.my-delete-icon:hover { color: #a71d2a; }
+```
+
+### Cache Busting
+Add version parameter to prevent stale CSS/JS:
+```php
+$assetVersion = '1.0.0';  // Bump on each release
+$document->addStyleSheet('components/com_example/css/style.css?v=' . $assetVersion);
+$document->addScript('components/com_example/js/script.js?v=' . $assetVersion);
+```
+
+### Table Styling Pattern
+```css
+table.my-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+}
+table.my-table tr:nth-child(2n+1) {
+    background: var(--bs-tertiary-bg, #f8f9fa);
+}
+table.my-table tr:hover {
+    background: var(--bs-secondary-bg, #e9ecef);
+}
+table.my-table td, table.my-table th {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+}
+```
+
+---
+
 ## Common Errors & Fixes
 
 | Error | Cause | Solution |
@@ -320,3 +455,6 @@ Check these repos for working examples:
 - Use `version="6.0"` in manifests
 - Native Joomla libraries only (no third-party)
 - No `setRegistry()` in service providers
+- **Database schema identical to Joomla 5** (76 tables, same structure)
+- Only schema change: `#__history` table added `is_current` and `is_legacy` columns
+- Dark/light mode uses same CSS variables as Joomla 5 Atum template
