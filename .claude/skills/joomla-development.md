@@ -300,6 +300,128 @@ if (preg_match('/<img[^>]+src=["\']([^"\']+)["\'][^>]*>/i', $content, $matches))
 
 ---
 
+## Multi-Lingual Ready Extensions (MANDATORY)
+
+All new Joomla extensions MUST be built with multi-lingual support from the start. Never hardcode text strings.
+
+### Language File Structure
+
+Every extension needs language files for all user-facing text:
+
+```
+extension/
+├── language/
+│   └── en-GB/
+│       ├── mod_example.ini           # Frontend strings (modules)
+│       └── mod_example.sys.ini       # System strings (install, menu)
+```
+
+For components with admin interface:
+```
+com_example/
+├── admin/
+│   └── language/
+│       └── en-GB/
+│           ├── com_example.ini       # Admin interface strings
+│           └── com_example.sys.ini   # System strings
+├── site/
+│   └── language/
+│       └── en-GB/
+│           └── com_example.ini       # Frontend strings
+```
+
+### Language Key Naming Convention
+
+Use the extension prefix followed by descriptive keys:
+
+```ini
+; Good - Clear, prefixed keys
+MOD_WORLDCLOCKS_FIELD_TIMEZONE_LABEL="Timezone"
+MOD_WORLDCLOCKS_FIELD_TIMEZONE_DESC="Select the timezone to display."
+COM_MYCOMPONENT_ERROR_NOT_FOUND="The requested item was not found."
+PLG_SYSTEM_MYPLUGIN_SETTING_ENABLED="Enable Feature"
+
+; Bad - Ambiguous, generic keys
+TIMEZONE="Timezone"
+ERROR="Error"
+```
+
+### PHP Usage
+
+```php
+use Joomla\CMS\Language\Text;
+
+// Simple string
+echo Text::_('MOD_EXAMPLE_TITLE');
+
+// String with placeholder (%s, %d)
+echo Text::sprintf('MOD_EXAMPLE_ITEMS_FOUND', $count);
+
+// Plural forms
+echo Text::plural('MOD_EXAMPLE_N_ITEMS', $count);
+```
+
+### JavaScript Usage
+
+```javascript
+// In Joomla 5, use Joomla.Text
+const message = Joomla.Text._('MOD_EXAMPLE_CONFIRM_DELETE');
+
+// Pass strings from PHP to JS
+$wa = $this->getDocument()->getWebAssetManager();
+$wa->addInlineScript('
+    Joomla.Text.load(' . json_encode([
+        'MOD_EXAMPLE_CONFIRM' => Text::_('MOD_EXAMPLE_CONFIRM'),
+        'MOD_EXAMPLE_CANCEL'  => Text::_('MOD_EXAMPLE_CANCEL'),
+    ]) . ');
+');
+```
+
+### Language File Format (.ini)
+
+```ini
+; Extension Name - Language File
+; Copyright notice
+; License
+
+; Section comment
+KEY_NAME="Value with proper escaping"
+KEY_WITH_QUOTES="Use \"escaped quotes\" inside"
+KEY_WITH_PLACEHOLDER="Found %d items in %s"
+
+; HTML is allowed but use sparingly
+KEY_WITH_HTML="Click <strong>here</strong> to continue"
+```
+
+**CRITICAL Requirements:**
+- Files MUST be UTF-8 WITHOUT BOM
+- Keys MUST be UPPERCASE with underscores
+- Values MUST be in double quotes
+- No trailing spaces after values
+- Semicolons start comments
+
+### Manifest Language Declaration
+
+```xml
+<languages folder="language">
+    <language tag="en-GB">en-GB/mod_example.ini</language>
+    <language tag="en-GB">en-GB/mod_example.sys.ini</language>
+</languages>
+```
+
+### Multi-Lingual Checklist
+
+- [ ] All user-facing text uses `Text::_()` or `Text::sprintf()`
+- [ ] Language keys use extension prefix (MOD_, COM_, PLG_)
+- [ ] Both `.ini` and `.sys.ini` files exist
+- [ ] Files are UTF-8 without BOM
+- [ ] No hardcoded text in PHP, JS, or template files
+- [ ] Form field labels/descriptions use language keys
+- [ ] Error messages use language keys
+- [ ] Success messages use language keys
+
+---
+
 ## Joomla 5 Core Database Tables
 
 When building extensions that work with database tables (backup, staging, migration tools), use this reference.

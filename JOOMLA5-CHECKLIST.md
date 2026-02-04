@@ -454,6 +454,103 @@ See the [Language System Requirements](README.md#language-system-requirements) s
 
 ---
 
+## Multi-Lingual Ready Extensions
+
+**MANDATORY**: All new extensions MUST be set up for multi-lingual support from the start, even if initially only English is provided.
+
+### Why Multi-Lingual Ready?
+
+- Joomla has a worldwide community with translations in 70+ languages
+- Adding translation support later requires refactoring all hardcoded strings
+- Professional extensions always support multiple languages
+- It's a Joomla best practice and expected by the community
+
+### Multi-Lingual Checklist
+
+- [ ] **No hardcoded strings**: Every user-facing string uses `Text::_()` or `Text::sprintf()`
+- [ ] **Language file structure**: Create proper `language/en-GB/` folder structure
+- [ ] **Consistent key naming**: Use `EXTENSION_PREFIX_DESCRIPTIVE_NAME` pattern
+- [ ] **Translatable XML**: All manifest labels/descriptions use language constants
+- [ ] **Form fields**: Every field label and description is translatable
+- [ ] **JavaScript strings**: Use `Joomla.Text._()` for JS translations
+- [ ] **Error messages**: All error/success messages use language constants
+- [ ] **Email templates**: Any email content uses translatable strings
+
+### Language Key Naming Convention
+
+```
+COM_COMPONENTNAME_VIEW_TITLE
+COM_COMPONENTNAME_FIELD_FIELDNAME_LABEL
+COM_COMPONENTNAME_FIELD_FIELDNAME_DESC
+COM_COMPONENTNAME_ERROR_SOMETHING_FAILED
+COM_COMPONENTNAME_SUCCESS_ITEM_SAVED
+
+MOD_MODULENAME_FIELD_SETTING_LABEL
+MOD_MODULENAME_NO_ITEMS_FOUND
+
+PLG_SYSTEM_PLUGINNAME_SETTING_LABEL
+PLG_CONTENT_PLUGINNAME_ERROR_MESSAGE
+```
+
+### PHP Usage
+
+```php
+// Simple string
+echo Text::_('COM_MYEXT_WELCOME_MESSAGE');
+
+// String with variables
+echo Text::sprintf('COM_MYEXT_ITEMS_FOUND', $count);
+
+// Plural forms
+echo Text::plural('COM_MYEXT_N_ITEMS_DELETED', $count);
+```
+
+### JavaScript Usage
+
+Add strings to script options in your view:
+```php
+$document = Factory::getApplication()->getDocument();
+$document->addScriptOptions('com_myext', [
+    'text' => [
+        'confirm' => Text::_('COM_MYEXT_CONFIRM_DELETE'),
+        'success' => Text::_('COM_MYEXT_SUCCESS'),
+    ]
+]);
+```
+
+Access in JavaScript:
+```javascript
+const text = Joomla.getOptions('com_myext').text;
+alert(text.confirm);
+```
+
+### Language File Template
+
+```ini
+; Language file for My Extension
+; Copyright (C) [YEAR] [COMPANY]. All rights reserved.
+; License GNU General Public License version 2 or later
+
+; Extension name and description (shown in installer)
+COM_MYEXTENSION="My Extension"
+COM_MYEXTENSION_XML_DESCRIPTION="Description of the extension for the installer."
+
+; Common
+COM_MYEXTENSION_SAVE="Save"
+COM_MYEXTENSION_CANCEL="Cancel"
+COM_MYEXTENSION_ERROR_GENERIC="An error occurred. Please try again."
+
+; Field labels and descriptions
+COM_MYEXTENSION_FIELD_TITLE_LABEL="Title"
+COM_MYEXTENSION_FIELD_TITLE_DESC="Enter the title for this item."
+
+; Messages
+COM_MYEXTENSION_SUCCESS_SAVED="Item saved successfully."
+COM_MYEXTENSION_ERROR_NOT_FOUND="The requested item was not found."
+```
+
+---
+
 ## Joomla 5 Core Database Tables
 
 Joomla 5 installs 75 core tables. When building extensions that work with database tables (backup tools, staging tools, migration), use this reference to identify core vs third-party tables.
