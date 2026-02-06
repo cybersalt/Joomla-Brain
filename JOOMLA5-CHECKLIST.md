@@ -21,6 +21,11 @@
 - [ ] Check package structure has proper `admin/` folder
 - [ ] Verify no intermediate zip files left behind
 
+### Post-Install Link
+- [ ] `script.php` `postflight()` displays a clickable link/button to open the extension after install/update
+- [ ] Uses Bootstrap classes (`card`, `btn btn-primary`) - NOT inline background/text colors (dark mode compatibility)
+- [ ] Message distinguishes between "installed" and "updated"
+
 ### Testing
 - [ ] Test installation on clean Joomla 5 site
 - [ ] Test upgrade from previous version
@@ -31,6 +36,63 @@
 ---
 
 ## Common Issues & Solutions
+
+### Post-Install Link (Required for ALL Extensions)
+
+**MANDATORY**: Every Cybersalt extension MUST include a post-install link so users can click directly to the extension from the installation success page.
+
+**Implementation** in `script.php`:
+```php
+public function postflight($type, $parent): bool
+{
+    $this->clearAutoloadCache();
+    $this->showPostInstallMessage($type);
+    return true;
+}
+
+protected function showPostInstallMessage(string $type): void
+{
+    $messageKey = $type === 'update'
+        ? 'COM_YOUREXT_POSTINSTALL_UPDATED'
+        : 'COM_YOUREXT_POSTINSTALL_INSTALLED';
+
+    // For components:
+    $url = 'index.php?option=com_yourcomponent';
+    // For plugins (link to plugin settings):
+    // $url = 'index.php?option=com_plugins&view=plugin&layout=edit&extension_id=' . $this->getPluginId();
+    // For modules (link to module manager):
+    // $url = 'index.php?option=com_modules';
+
+    echo '<div class="card mb-3" style="margin: 20px 0;">'
+        . '<div class="card-body">'
+        . '<h3 class="card-title">' . Text::_('COM_YOUREXT') . '</h3>'
+        . '<p class="card-text">' . Text::_($messageKey) . '</p>'
+        . '<a href="' . $url . '" class="btn btn-primary text-white">'
+        . '<span class="icon-wrench" aria-hidden="true"></span> '
+        . Text::_('COM_YOUREXT_POSTINSTALL_OPEN')
+        . '</a>'
+        . '</div></div>';
+}
+```
+
+**Required `.sys.ini` strings** (loaded during installation):
+```ini
+COM_YOUREXT_POSTINSTALL_INSTALLED="The extension has been successfully installed."
+COM_YOUREXT_POSTINSTALL_UPDATED="The extension has been successfully updated."
+COM_YOUREXT_POSTINSTALL_OPEN="Open Extension Name"
+COM_YOUREXT_ERROR_PHP_VERSION="PHP %s or higher is required. You are running PHP %s."
+COM_YOUREXT_ERROR_JOOMLA_VERSION="Joomla %s or higher is required. You are running Joomla %s."
+COM_YOUREXT_ERROR_DELETE_CACHE="Please manually delete administrator/cache/autoload_psr4.php"
+```
+
+**Key points:**
+- Use **Bootstrap classes** (`card`, `btn btn-primary`) - Atum styles these for both light and dark mode
+- Do NOT set inline `background` or `color` styles - causes white-on-white in dark mode
+- **All text MUST use language constants** - stored in `.sys.ini` since they're needed during installation
+- Distinguish between "installed" and "updated" using separate language keys
+- For plugins, you may need a helper method to look up the `extension_id`
+
+---
 
 ### Component "Class Not Found" Errors
 

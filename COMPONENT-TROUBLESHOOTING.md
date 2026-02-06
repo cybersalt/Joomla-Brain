@@ -373,6 +373,163 @@ Copy-Item "administrator\components\com_name\*" -Destination "temp_component\adm
 
 ---
 
+## Workflow System Issues After J3→J4/J5 Migration
+
+### Problem: Articles Not Showing in Article Manager
+
+After migrating from Joomla 3 to Joomla 4/5, articles may not appear in the Article Manager. This is caused by a missing or incomplete workflow system.
+
+**Root Cause:** The Joomla 3→4 migration may fail to create some or all of the 4 workflow tables, or fail to populate them with default records. Without these, Joomla cannot process article workflows and articles become invisible in the Article Manager.
+
+### The 4 Workflow Tables
+
+Joomla 5 uses exactly 4 workflow tables:
+
+| Table | Purpose | Default Records |
+|-------|---------|-----------------|
+| `#__workflows` | Workflow definitions | 1 record: "COM_WORKFLOW_BASIC_WORKFLOW" for `com_content.article` |
+| `#__workflow_stages` | Workflow stages | 1 record: "COM_WORKFLOW_BASIC_STAGE" (id=1, workflow_id=1) |
+| `#__workflow_transitions` | Stage transitions | 7 records: Unpublish, Publish, Trash, Archive, Feature, Unfeature, Publish & Feature |
+| `#__workflow_associations` | Per-article stage assignments | 1 record per article (item_id, stage_id=1, extension='com_content.article') |
+
+### Diagnosis
+
+Check via phpMyAdmin or database manager:
+
+```sql
+-- Check if tables exist
+SHOW TABLES LIKE '%workflow%';
+
+-- Check for default workflow record
+SELECT * FROM #__workflows WHERE extension = 'com_content.article';
+
+-- Check for default stage
+SELECT * FROM #__workflow_stages WHERE workflow_id = 1;
+
+-- Check for transitions (should be 7)
+SELECT COUNT(*) FROM #__workflow_transitions WHERE workflow_id = 1;
+
+-- Check for articles missing associations
+SELECT COUNT(*) FROM #__content c
+WHERE NOT EXISTS (
+    SELECT 1 FROM #__workflow_associations wa WHERE wa.item_id = c.id
+);
+```
+
+### Fix: Restore Missing Tables
+
+```sql
+-- Create workflow_stages if missing
+CREATE TABLE IF NOT EXISTS `#__workflow_stages` (
+    `id` int NOT NULL AUTO_INCREMENT,
+    `asset_id` int DEFAULT 0,
+    `ordering` int NOT NULL DEFAULT 0,
+    `workflow_id` int NOT NULL,
+    `published` tinyint NOT NULL DEFAULT 0,
+    `title` varchar(255) NOT NULL,
+    `description` text NOT NULL,
+    `default` tinyint NOT NULL DEFAULT 0,
+    `checked_out_time` datetime DEFAULT NULL,
+    `checked_out` int unsigned DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_workflow_id` (`workflow_id`),
+    KEY `idx_checked_out` (`checked_out`),
+    KEY `idx_title` (`title`(191)),
+    KEY `idx_asset_id` (`asset_id`),
+    KEY `idx_default` (`default`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci;
+
+-- Create workflow_transitions if missing
+CREATE TABLE IF NOT EXISTS `#__workflow_transitions` (
+    `id` int NOT NULL AUTO_INCREMENT,
+    `asset_id` int DEFAULT 0,
+    `ordering` int NOT NULL DEFAULT 0,
+    `workflow_id` int NOT NULL,
+    `published` tinyint NOT NULL DEFAULT 0,
+    `title` varchar(255) NOT NULL,
+    `description` text NOT NULL,
+    `from_stage_id` int NOT NULL,
+    `to_stage_id` int NOT NULL,
+    `options` text NOT NULL,
+    `checked_out_time` datetime DEFAULT NULL,
+    `checked_out` int unsigned DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_title` (`title`(191)),
+    KEY `idx_asset_id` (`asset_id`),
+    KEY `idx_checked_out` (`checked_out`),
+    KEY `idx_from_stage_id` (`from_stage_id`),
+    KEY `idx_to_stage_id` (`to_stage_id`),
+    KEY `idx_workflow_id` (`workflow_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci;
+
+-- Create workflow_associations if missing
+CREATE TABLE IF NOT EXISTS `#__workflow_associations` (
+    `item_id` int NOT NULL DEFAULT 0,
+    `stage_id` int NOT NULL,
+    `extension` varchar(50) NOT NULL,
+    PRIMARY KEY (`item_id`, `extension`),
+    KEY `idx_item_id` (`item_id`),
+    KEY `idx_stage_id` (`stage_id`),
+    KEY `idx_extension` (`extension`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci;
+```
+
+### Fix: Insert Default Records
+
+```sql
+-- Default workflow
+INSERT IGNORE INTO #__workflows
+    (id, asset_id, published, title, description, extension, `default`, ordering, created, created_by, modified, modified_by)
+VALUES
+    (1, 0, 1, 'COM_WORKFLOW_BASIC_WORKFLOW', '', 'com_content.article', 1, 1, NOW(), 0, NOW(), 0);
+
+-- Default stage
+INSERT IGNORE INTO #__workflow_stages
+    (id, asset_id, ordering, workflow_id, published, title, description, `default`)
+VALUES
+    (1, 0, 1, 1, 1, 'COM_WORKFLOW_BASIC_STAGE', '', 1);
+
+-- Default transitions (all use from_stage_id=-1 meaning "any stage", to_stage_id=1)
+INSERT IGNORE INTO #__workflow_transitions (id, asset_id, published, ordering, workflow_id, title, description, from_stage_id, to_stage_id, options) VALUES
+    (1, 0, 1, 1, 1, 'UNPUBLISH', '', -1, 1, '{"publishing":"0"}'),
+    (2, 0, 1, 2, 1, 'PUBLISH', '', -1, 1, '{"publishing":"1"}'),
+    (3, 0, 1, 3, 1, 'TRASH', '', -1, 1, '{"publishing":"-2"}'),
+    (4, 0, 1, 4, 1, 'ARCHIVE', '', -1, 1, '{"publishing":"2"}'),
+    (5, 0, 1, 5, 1, 'FEATURE', '', -1, 1, '{"featuring":"1"}'),
+    (6, 0, 1, 6, 1, 'UNFEATURE', '', -1, 1, '{"featuring":"0"}'),
+    (7, 0, 1, 7, 1, 'PUBLISH_AND_FEATURE', '', -1, 1, '{"publishing":"1","featuring":"1"}');
+
+-- Create associations for articles that don't have them
+INSERT INTO #__workflow_associations (item_id, stage_id, extension)
+SELECT c.id, 1, 'com_content.article'
+FROM #__content c
+WHERE NOT EXISTS (
+    SELECT 1 FROM #__workflow_associations wa WHERE wa.item_id = c.id
+);
+```
+
+### Important Notes
+
+- **Workflows do NOT need to be enabled** in `com_content` configuration for articles to save/display properly. The `workflow_enabled` setting is irrelevant to this problem.
+- The problem **recurs for new articles** if `#__workflow_stages` or `#__workflow_transitions` tables are missing - even if the `#__workflows` record exists and `#__workflow_associations` are populated for existing articles.
+- Always fix the infrastructure (tables + default records) FIRST, then populate article associations.
+- Use `INSERT IGNORE` for safe re-runnable inserts of default records.
+- Use `SHOW TABLES LIKE` for checking table existence programmatically.
+
+### Programmatic Table Existence Check
+
+```php
+protected function isTableMissing(string $tableName): bool
+{
+    $db = $this->getDatabase();
+    $fullName = $db->getPrefix() . $tableName;
+    $db->setQuery("SHOW TABLES LIKE " . $db->quote($fullName));
+    return empty($db->loadResult());
+}
+```
+
+---
+
 ## Quick Reference Checklist
 
 When component won't load, check in order:
