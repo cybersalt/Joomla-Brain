@@ -5,6 +5,7 @@ This repository contains best practices, scripts, and documentation for Joomla c
 ## Contents
 - `build-package.bat`: Batch script for building Joomla packages
 - `PACKAGE-BUILD-NOTES.md`: Notes and troubleshooting for package creation
+- `NEW-EXTENSION-CHECKLIST.md`: Step-by-step checklist for creating a new Cybersalt extension
 - `JOOMLA5-CHECKLIST.md`: Checklist for Joomla 5 development
 - `JOOMLA6-CHECKLIST.md`: Checklist for Joomla 6 development
 - Additional best practices files
