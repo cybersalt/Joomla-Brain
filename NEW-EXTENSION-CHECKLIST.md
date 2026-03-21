@@ -13,7 +13,7 @@ Follow this checklist in order when creating a new Joomla extension.
 ## Extension Code
 
 - [ ] **Company info in manifest** — Cybersalt author, support@cybersalt.com, cybersalt.com (see `company-info.md`)
-- [ ] **License** — GNU General Public License version 3
+- [ ] **License** — GNU General Public License version 2 or later (see https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 - [ ] **Namespace** — `Cybersalt\Plugin\{Group}\{Name}`, `Cybersalt\Module\{Name}`, or `Cybersalt\Component\{Name}`
 - [ ] **Language system** — all strings translatable, `.ini` and `.sys.ini` files, language constants in XML
 - [ ] **Post-install link** — `script.php` with Bootstrap card UI linking to extension settings
