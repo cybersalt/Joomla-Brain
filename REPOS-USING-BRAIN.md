@@ -15,6 +15,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 ### Packages
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
+| [cs-continuous-learning](https://github.com/cybersalt/cs-continuous-learning) | Package | Continuous learning system — topics, article tagging, custom fields | Joomla 5 native (component + 2 plugins) |
 | [StageIt-5](https://github.com/cybersalt/StageIt-5) | Package | Environment banner system | Joomla 5 (legacy plugin format) |
 | [StageIt-6](https://github.com/cybersalt/StageIt-6) | Package | Environment banner system | Joomla 6 (legacy plugin format) |
 
