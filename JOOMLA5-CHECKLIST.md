@@ -26,6 +26,13 @@
 - [ ] Uses Bootstrap classes (`card`, `btn btn-primary`) - NOT inline background/text colors (dark mode compatibility)
 - [ ] Message distinguishes between "installed" and "updated"
 
+### Component Routing (site-facing components only)
+- [ ] Router class at `site/src/Service/Router.php` using `RouterBase`
+- [ ] `RouterServiceInterface` + `RouterServiceTrait` on component class
+- [ ] `RouterFactory` registered in `admin/services/provider.php`
+- [ ] All `Route::_()` calls include `&Itemid=` (see JOOMLA5-COMPONENT-ROUTING.md)
+- [ ] Autoload cache cleared after install
+
 ### Testing
 - [ ] Test installation on clean Joomla 5 site
 - [ ] Test upgrade from previous version
