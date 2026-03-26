@@ -65,8 +65,8 @@ protected function showPostInstallMessage(string $type): void
 
     // For components:
     $url = 'index.php?option=com_yourcomponent';
-    // For plugins (link to plugin settings):
-    // $url = 'index.php?option=com_plugins&view=plugin&layout=edit&extension_id=' . $this->getPluginId();
+    // For plugins (filtered list - direct edit links fail due to CSRF token):
+    // $url = 'index.php?option=com_plugins&view=plugins&filter[search]=Your Plugin Name';
     // For modules (link to module manager):
     // $url = 'index.php?option=com_modules';
 
