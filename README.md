@@ -2,6 +2,8 @@
 
 This repository contains best practices, scripts, and documentation for Joomla component and package development. It is designed to be included as a submodule in other Joomla projects.
 
+> **Disclaimer**: This is a living document that evolves as we learn, build, and correct mistakes. Content may change at any time — patterns may be revised, guidance may be updated, and errors may be fixed as our understanding of Joomla development deepens. Always check for updates.
+
 ## Contents
 
 ### Guides (Detailed References)
