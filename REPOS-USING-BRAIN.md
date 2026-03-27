@@ -55,6 +55,11 @@ git commit -m "Update Joomla Brain submodule"
 - Both formats work in Joomla 5 due to backward compatibility
 - Joomla 6 will require the native format (legacy deprecated)
 
+## External Resources
+
+### MCP4Joomla
+[nikosdion/joomla-mcp-php](https://github.com/nikosdion/joomla-mcp-php/) — MCP server (PHP) that lets AI tools manage Joomla sites via the Web Services API. 212 tools covering content, users, menus, extensions, custom fields, config, and more. Useful for AI-assisted site management, content creation, and testing. Requires Joomla 5.2+ with Web Services API enabled + Super User API token.
+
 ## Standards
 
 ### Log Viewer UI
