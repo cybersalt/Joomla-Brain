@@ -41,65 +41,12 @@ Set-Location 'path\to\build'
 
 ---
 
-## Plugin Manifest Structure (Joomla 5)
+## Plugin & Module Structure
 
-### Minimal Working Manifest
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<extension type="plugin" group="content" method="upgrade" version="5.0">
-  <name>plg_content_myplugin</name>
-  <author>Your Name</author>
-  <version>1.0.0</version>
-  <description>Plugin description</description>
-  <files>
-    <filename plugin="myplugin">myplugin.php</filename>
-    <filename>index.html</filename>
-    <folder>language</folder>
-  </files>
-  <config>
-    <fields name="params">
-      <fieldset name="basic" label="Settings">
-        <!-- fields here -->
-      </fieldset>
-    </fields>
-  </config>
-</extension>
-```
-
-### Key Points
-
-1. **Extension tag attributes**: `type="plugin" group="content" method="upgrade" version="5.0"`
-   - NO `element` attribute needed
-   - `version="5.0"` is the manifest version, not Joomla version
-
-2. **Manifest filename**: Can be `myplugin.xml` or `plg_content_myplugin.xml` - both work
-
-3. **Plugin attribute**: `<filename plugin="myplugin">` - the `plugin` attribute value becomes the plugin's element name
-
-4. **DO NOT use `<languages>` section** for plugins that keep language files within the plugin folder. Just use:
-   ```xml
-   <folder>language</folder>
-   ```
-   Combined with `protected $autoloadLanguage = true;` in PHP class.
-
-5. **Language file naming**: Use `plg_content_myplugin.ini` (no `en-GB.` prefix when inside plugin folder)
-
----
-
-## Directory Structure
-
-```
-plugin_folder/
-├── myplugin.xml              # Manifest
-├── myplugin.php              # Main plugin class
-├── index.html                # Security blank file
-└── language/
-    ├── index.html
-    └── en-GB/
-        ├── index.html
-        └── plg_content_myplugin.ini
-```
+For full manifest and file structure details, see:
+- **Plugins**: `JOOMLA5-PLUGIN-GUIDE.md`
+- **Modules**: `JOOMLA5-MODULE-GUIDE.md`
+- **Components**: `COMPONENT-TROUBLESHOOTING.md`
 
 ---
 
@@ -141,19 +88,9 @@ plugin_folder/
 
 ---
 
-## Radio/Toggle Fields
+## Package Output Location
 
-Use `class="btn-group btn-group-yesno"` for Yes/No toggles:
-
-```xml
-<field name="enable_feature" type="radio" label="Enable Feature"
-       class="btn-group btn-group-yesno" default="1">
-  <option value="1">JYES</option>
-  <option value="0">JNO</option>
-</field>
-```
-
-The `layout="joomla.form.field.radio.switcher"` also works but the class method is more compatible.
+**Always place built ZIP packages in the project root directory**, not in a `dist/` or `build/` subfolder. This keeps things simple and matches the build script examples below which output to `..` (parent of the build folder, i.e., project root).
 
 ---
 

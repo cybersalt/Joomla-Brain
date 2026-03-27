@@ -293,6 +293,8 @@ $results = $db->loadColumn();
 
 ## Notes
 
+For multi-select UI (fancy-select layout), see `JOOMLA5-MODULE-GUIDE.md` Form Field Best Practices section.
+
 1. Always check if the field/group already exists before creating to avoid duplicates on reinstall/update
 2. Use `try/catch` and log errors - don't let field creation failures break the installation
 3. The `name` field is used for database queries; the `title` and `label` are for display

@@ -17,11 +17,15 @@ You are assisting with Joomla extension development. Apply these patterns, conve
 - Use `filter="raw"` in XML field definition
 - Scope CSS using unique ID: `mod-modulename-{$module->id}`
 
-### 3. Changelogs
-- Maintain BOTH `CHANGELOG.md` and `CHANGELOG.html`
-- Markdown uses emoji headers: 🚀 New | 🔧 Improvements | 📦 Build | 🐛 Fixes | 🔍 Security | 📝 Docs
+### 3. Changelogs (CRITICAL: 2 FILES!)
+**⚠️ ALWAYS update BOTH files together - they must stay in sync:**
+1. `CHANGELOG.md` - Markdown format for GitHub/developers
+2. `CHANGELOG.html` - HTML format for Joomla admin display
+
+- Markdown uses emoji headers: 🚀 New | 🔧 Improvements | 📦 Build | 🐛 Fixes | 🔍 Security | 📝 Docs | 🌐 i18n
 - HTML version is article-ready (NO `<html>`, `<body>`, `<style>` tags)
 - Use semantic versioning: MAJOR.MINOR.PATCH
+- **Never update one without the other!**
 
 ### 4. Enhanced Multi-Select (Joomla 5+)
 - Use `layout="joomla.form.field.list-fancy-select"` for multi-select fields
@@ -419,6 +423,49 @@ KEY_WITH_HTML="Click <strong>here</strong> to continue"
 - [ ] Form field labels/descriptions use language keys
 - [ ] Error messages use language keys
 - [ ] Success messages use language keys
+
+### Core Languages (MANDATORY for all extensions)
+
+All PHP Web Design Joomla extensions MUST include translations for these 15 core languages:
+
+| Language | Code | Notes |
+|----------|------|-------|
+| English (UK) | en-GB | Primary/base language |
+| Dutch | nl-NL | Netherlands |
+| German | de-DE | Germany |
+| Spanish | es-ES | Spain |
+| French | fr-FR | France |
+| Italian | it-IT | Italy |
+| Portuguese | pt-BR | Brazil |
+| Russian | ru-RU | Russia |
+| Polish | pl-PL | Poland |
+| Japanese | ja-JP | Japan |
+| Chinese Simplified | zh-CN | China |
+| Turkish | tr-TR | Turkey |
+| Greek | el-GR | Greece |
+| Czech | cs-CZ | Czech Republic |
+| Swedish | sv-SE | Sweden |
+
+**Language File Structure per Language:**
+```
+language/{lang-code}/
+├── {lang-code}.{extension_name}.ini      # Main language strings
+├── {lang-code}.{extension_name}.sys.ini  # System strings (install, menu)
+└── index.html                            # Security file
+```
+
+**Manifest Declaration Example:**
+```xml
+<languages folder="admin">
+    <language tag="en-GB">language/en-GB/en-GB.com_example.ini</language>
+    <language tag="en-GB">language/en-GB/en-GB.com_example.sys.ini</language>
+    <language tag="nl-NL">language/nl-NL/nl-NL.com_example.ini</language>
+    <language tag="nl-NL">language/nl-NL/nl-NL.com_example.sys.ini</language>
+    <!-- ... repeat for all 15 languages ... -->
+</languages>
+```
+
+**Why these languages?** These represent the most active Joomla communities worldwide and ensure our extensions are accessible to the majority of Joomla users globally.
 
 ---
 
