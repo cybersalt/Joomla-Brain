@@ -31,6 +31,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 |------|------|-------------|--------|
 | [cybersalt-related-articles](https://github.com/cybersalt/cybersalt-related-articles) | Module | Related articles display | Joomla 5 |
 | [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) | Module | World clocks display | Joomla 5 native (Dispatcher pattern) |
+| [cs-image-map-hotlinking](https://github.com/cybersalt/cs-image-map-hotlinking) | Module | Interactive image maps with visual hotspot editor | Joomla 5/6 native (Dispatcher, custom fields, inline data) |
 
 ## Adding This Submodule
 
