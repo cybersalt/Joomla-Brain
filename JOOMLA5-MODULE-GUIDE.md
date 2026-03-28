@@ -961,6 +961,241 @@ return Route::_($url);
 
 ---
 
+## Template Variables (Dispatcher Pattern)
+
+With the Dispatcher pattern, `getLayoutData()` returns an array. In the template, these are available as **extracted variables** — NOT as `$displayData`.
+
+### WRONG — Will produce "Undefined variable $displayData"
+
+```php
+$hotspots = $displayData['hotspots'];  // WRONG!
+$moduleId = $displayData['module']->id; // WRONG!
+```
+
+### CORRECT — Variables are extracted directly
+
+```php
+// Variables from getLayoutData() are available directly:
+$myData    = $myData ?? [];           // Use null coalescing for safety
+$moduleId  = $module->id ?? 0;        // $module is always available
+$params    = $params;                 // $params is always available
+```
+
+Also, `$this->escape()` is NOT available in module templates. Use a local helper:
+
+```php
+$e = function (string $text): string {
+    return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+};
+// Then use: <?php echo $e($value); ?>
+```
+
+---
+
+## Custom Form Field Types
+
+Modules can define custom form field types in `src/Field/`. The class name must match the type with `Field` suffix and lowercase type in the `$type` property.
+
+### File Location
+
+```
+src/Field/ImagemapeditorField.php  → type="imagemapeditor"
+src/Field/ViewerbuttonField.php    → type="viewerbutton"
+```
+
+### Namespace
+
+```php
+namespace Cybersalt\Module\Example\Site\Field;
+```
+
+Note: `Site` is in the namespace but NOT in the file path (same rule as Dispatcher).
+
+### Manifest Registration
+
+Add `addfieldprefix` to the `<fields>` tag:
+
+```xml
+<fields name="params" addfieldprefix="Cybersalt\Module\Example\Site\Field">
+    <fieldset name="basic">
+        <field
+            name="myfield"
+            type="imagemapeditor"
+            label="MY_FIELD_LABEL"
+            filter="raw"
+        />
+    </fieldset>
+</fields>
+```
+
+### Passing Data to JavaScript
+
+When building complex admin UIs (visual editors, pickers, etc.), embed data as HTML data attributes rather than using AJAX:
+
+```php
+class ImagemapeditorField extends FormField
+{
+    protected function getInput(): string
+    {
+        // Query data server-side
+        $items = $this->getMenuItems();
+
+        // Embed as data attributes — no AJAX needed
+        $itemsJson = $this->escape(json_encode($items));
+        $strings   = json_encode(['save' => Text::_('MY_SAVE'), ...]);
+
+        return <<<HTML
+        <div id="{$this->id}-editor"
+             data-strings='{$strings}'
+             data-items='{$itemsJson}'>
+            <!-- Editor UI -->
+        </div>
+        <input type="hidden" name="{$this->name}" id="{$this->id}" value="{$this->escape($this->value)}">
+        HTML;
+    }
+}
+```
+
+In JavaScript, read the data:
+
+```javascript
+var editor = document.querySelector('#myfield-editor');
+var items  = JSON.parse(editor.getAttribute('data-items') || '[]');
+var strings = JSON.parse(editor.getAttribute('data-strings') || '{}');
+```
+
+**Why not AJAX?** We tried three AJAX approaches that all failed:
+1. **com_ajax with HelperFactory** — requires the module to be **published** on the site side. Useless when configuring a module that isn't published yet. Returns `[]` otherwise.
+2. **Standalone ajax.php bootstrapping Joomla** — fragile path resolution, session sharing issues between admin and site apps, CSP restrictions on some hosts.
+3. **Popup window with Joomla modal views** — `window.parent` doesn't work from popups (it's itself, not the opener), callback injection is unreliable across page navigations.
+
+The data-attribute approach is instant, needs zero network requests, works regardless of module publish state, and has no session/CSRF issues since it's rendered server-side in the admin form.
+
+---
+
+## com_ajax for Modules
+
+If you DO need AJAX for a module (e.g., the module is always published), here's the setup:
+
+### 1. Register HelperFactory in provider.php
+
+```php
+use Joomla\CMS\Extension\Service\Provider\HelperFactory;
+
+$container->registerServiceProvider(new HelperFactory('\\YourCompany\\Module\\Example\\Site\\Helper'));
+```
+
+### 2. Create Helper class
+
+```php
+namespace YourCompany\Module\Example\Site\Helper;
+
+use Joomla\Database\DatabaseAwareInterface;
+use Joomla\Database\DatabaseAwareTrait;
+
+class ExampleHelper implements DatabaseAwareInterface
+{
+    use DatabaseAwareTrait;
+
+    public function myMethodAjax(): string
+    {
+        $db = $this->getDatabase();
+        // ... query and return JSON string
+        return json_encode($result);
+    }
+}
+```
+
+**CRITICAL**: The Helper class MUST implement `DatabaseAwareInterface` (not just use the trait), otherwise the database connection is never injected and all queries fail silently.
+
+### 3. Call from JavaScript
+
+```
+GET /index.php?option=com_ajax&module=example&method=myMethod&format=raw&{csrf_token}=1
+```
+
+### Gotchas
+
+- The module **must be published** (enabled) on the site for com_ajax to find it
+- The URL is site-side (`/index.php`), not admin-side (`/administrator/index.php`)
+- Return type should be `string` (pre-encoded JSON), not `array` — com_ajax wraps arrays in its own response structure
+- The response format with `format=raw` is: the raw return value. With `format=json` it's `{success:true, data:["your_string"]}`
+
+---
+
+## script.php: Handling Uninstall
+
+The `postflight()` method runs for ALL types including uninstall. Always check the type:
+
+```php
+public function postflight(string $type, InstallerAdapter $adapter): void
+{
+    if ($type === 'uninstall') {
+        return;
+    }
+
+    $this->showPostInstallMessage($type);
+}
+```
+
+Without this check, uninstalling shows the "successfully installed" message with a link to open the (now-deleted) extension.
+
+---
+
+## Image Path Handling
+
+Joomla's media field stores paths in various formats depending on version and context:
+
+| Stored value | What it means |
+|---|---|
+| `images/imagemaps/photo.jpg` | Full path from site root (includes `images/`) |
+| `imagemaps/photo.jpg` | Relative to `images/` directory |
+| `/images/imagemaps/photo.jpg` | Absolute path |
+
+### Normalizing for frontend output
+
+```php
+$imageSrc = $image;
+if (strpos($imageSrc, 'http') !== 0 && strpos($imageSrc, '/') !== 0) {
+    if (strpos($imageSrc, 'images/') !== 0) {
+        $imageSrc = 'images/' . $imageSrc;
+    }
+    $imageSrc = '/' . $imageSrc;
+}
+```
+
+### Normalizing for admin JS preview
+
+```javascript
+if (src.indexOf('http') === 0 || src.indexOf('//') === 0) {
+    // Full URL — use as-is
+} else if (src.indexOf('/') === 0) {
+    // Absolute path — use as-is
+} else if (src.indexOf('images/') === 0) {
+    src = '/' + src;
+} else {
+    src = '/images/' + src;
+}
+```
+
+### Watching for media field changes
+
+Joomla's media field updates unpredictably. Use multiple detection methods:
+
+```javascript
+var imageInput = document.querySelector('[name="jform[params][image]"]');
+// 1. Change event
+imageInput.addEventListener('change', function () { updateImage(this.value); });
+// 2. MutationObserver on parent joomla-field-media element
+var observer = new MutationObserver(function () { updateImage(imageInput.value); });
+observer.observe(imageInput.closest('joomla-field-media') || imageInput, { attributes: true, childList: true, subtree: true });
+// 3. Polling fallback
+setInterval(function () { /* check imageInput.value */ }, 500);
+```
+
+---
+
 ## Example Repositories
 
 - [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) - World Clocks module using Dispatcher pattern
+- [cs-image-map-hotlinking](https://github.com/cybersalt/cs-image-map-hotlinking) - Image map module with visual editor, custom form fields, inline data embedding

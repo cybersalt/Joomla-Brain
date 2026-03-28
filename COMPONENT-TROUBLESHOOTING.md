@@ -545,6 +545,23 @@ When component won't load, check in order:
 
 ---
 
+## Module-Specific Errors
+
+These apply to modules using the Dispatcher pattern:
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `Undefined variable $displayData` in template | Dispatcher pattern extracts variables directly, not into `$displayData` | Use `$myVar ?? default` instead of `$displayData['myVar']` |
+| `Call to undefined method escape()` in template | `$this->escape()` not available in module templates | Use `htmlspecialchars($text, ENT_QUOTES, 'UTF-8')` |
+| com_ajax returns `[]` for module helper | Module not published on site side | com_ajax requires module to be published. Use inline data-attributes instead |
+| com_ajax `DatabaseAwareTrait` queries fail silently | Helper class missing `DatabaseAwareInterface` | Must `implements DatabaseAwareInterface` not just `use DatabaseAwareTrait` |
+| Uninstall shows "successfully installed" message | `postflight()` runs on all types including uninstall | Check `if ($type === 'uninstall') return;` at start |
+| Image not showing in admin/frontend | Double-prepending `images/` to path | Joomla media field may store `images/foo.jpg` (already prefixed) — check before adding |
+| Admin form fields invisible in dark mode | Hardcoded background/text colors | Use `color: inherit`, `var(--body-bg)`, `var(--body-color)` — never set explicit bg/text colors |
+| Invalid CSS selector in querySelector | Using `!=` in attribute selectors | CSS doesn't support `!=`. Use `:not([name="x"])` or filter in JS |
+
+---
+
 ## Resources
 
 - [Joomla 5.3 Pagination API](https://api.joomla.org/cms-5/classes/Joomla-CMS-Pagination-Pagination.html)
