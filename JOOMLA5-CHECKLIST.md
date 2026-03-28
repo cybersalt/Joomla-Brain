@@ -43,6 +43,23 @@
 - [ ] Test in both light and dark mode
 - [ ] See `.claude/skills/joomla-development.md` Dark Mode section for CSS variable reference
 
+### Update Server (for GitHub-hosted extensions)
+- [ ] `<updateservers>` in manifest XML points to raw `updates.xml` on GitHub
+- [ ] `<changelogurl>` in manifest XML points to raw `CHANGELOG.html` on GitHub
+- [ ] `updates.xml` has correct `<version>`, `<element>`, `<type>`, `<folder>`
+- [ ] `<downloadurl>` points to the GitHub release asset (non-timestamped filename)
+- [ ] `<sha256>` checksum included (generate with `sha256sum` on the zip)
+- [ ] `<targetplatform>` set (e.g., `version="5\.[0-9]+"`)
+- [ ] `<php_minimum>` set (e.g., `8.1`)
+- [ ] GitHub Release created with both timestamped and non-timestamped zip filenames
+
+### GitHub Release
+- [ ] GitHub Release created via `gh release create vX.Y.Z`
+- [ ] Install zip attached to the release
+- [ ] Non-timestamped zip uploaded (for `updates.xml` download URL)
+- [ ] Release notes match changelog entry
+- [ ] README.md changelog section updated
+
 ### Testing
 - [ ] Test installation on clean Joomla 5 site
 - [ ] Test upgrade from previous version

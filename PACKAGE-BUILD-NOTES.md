@@ -112,3 +112,78 @@ Set-Location ..
 
 Write-Host "Created $zipName"
 ```
+
+---
+
+## Joomla Update Server (GitHub-hosted)
+
+To allow Joomla's built-in updater to detect and install new versions, you need three things:
+
+### 1. Manifest XML — add update server and changelog URLs
+
+```xml
+<changelogurl>https://raw.githubusercontent.com/OWNER/REPO/main/CHANGELOG.html</changelogurl>
+<updateservers>
+    <server type="extension" name="Extension Name Updates">https://raw.githubusercontent.com/OWNER/REPO/main/updates.xml</server>
+</updateservers>
+```
+
+### 2. `updates.xml` — in project root, committed to main branch
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<updates>
+    <update>
+        <name>Extension Name</name>
+        <description>Short description</description>
+        <element>extensionname</element>
+        <type>plugin</type>
+        <folder>system</folder>
+        <client>0</client>
+        <version>1.2.2</version>
+        <infourl title="Extension Name">https://github.com/OWNER/REPO</infourl>
+        <downloads>
+            <downloadurl type="full" format="zip">https://github.com/OWNER/REPO/releases/download/v1.2.2/extension_v1.2.2.zip</downloadurl>
+        </downloads>
+        <sha256>CHECKSUM_HERE</sha256>
+        <tags>
+            <tag>stable</tag>
+        </tags>
+        <targetplatform name="joomla" version="5\.[0-9]+" />
+        <php_minimum>8.1</php_minimum>
+    </update>
+</updates>
+```
+
+### 3. SHA256 Checksum — REQUIRED to avoid Joomla warning
+
+Without a `<sha256>` element, Joomla shows: *"This extension does not provide a checksum for validation"*
+
+Generate with:
+```bash
+sha256sum your_extension.zip
+```
+
+Then add the hash to `updates.xml` inside the `<update>` block.
+
+### 4. GitHub Release — upload both filenames
+
+The `<downloadurl>` uses a **non-timestamped** filename (e.g., `ext_v1.2.2.zip`), but your build produces a timestamped file. Upload both:
+
+```bash
+# Upload timestamped (primary asset)
+gh release create v1.2.2 ext_v1.2.2_20260319_1658.zip
+
+# Upload non-timestamped copy (for Joomla updater)
+cp ext_v1.2.2_20260319_1658.zip ext_v1.2.2.zip
+gh release upload v1.2.2 ext_v1.2.2.zip --clobber
+```
+
+### Release workflow summary
+
+1. Bump version in manifest XML
+2. Update `CHANGELOG.md`, `CHANGELOG.html`, `README.md` changelog section
+3. Build zip with 7-Zip (timestamped name)
+4. Generate SHA256 checksum and update `updates.xml`
+5. Commit and push all changes
+6. Create GitHub Release with both zip filenames attached
