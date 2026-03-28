@@ -33,6 +33,26 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-world-clocks](https://github.com/cybersalt/cs-world-clocks) | Module | World clocks display | Joomla 5 native (Dispatcher pattern) |
 | [cs-image-map-hotlinking](https://github.com/cybersalt/cs-image-map-hotlinking) | Module | Interactive image maps with visual hotspot editor | Joomla 5/6 native (Dispatcher, custom fields, inline data) |
 
+## Update Server Compliance
+
+When next working on any of these extensions, add full Joomla update server support (see `PACKAGE-BUILD-NOTES.md` and `JOOMLA5-CHECKLIST.md`):
+
+| Repo | updates.xml | sha256 | updateservers | changelogurl | CHANGELOG.html |
+|------|-------------|--------|---------------|--------------|----------------|
+| cs-userback-admin | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cs-autogallery | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-joomla-router-tracer | ❌ | ❌ | ❌ | ✅ | ✅ |
+| cs-browser-page-title | ❌ | ❌ | ❌ | ❌ | ✅ |
+| StageIt-5 | ❌ | ❌ | ✅ | ❌ | ✅ |
+| StageIt-6 | ❌ | ❌ | ✅ | ❌ | ✅ |
+| cs-filter-by-meta | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-talkback-to-joomla | ❌ | ❌ | ❌ | ✅ | ✅ |
+| cybersalt-related-articles | ❌ | ❌ | ❌ | ❌ | ❌ |
+| cs-world-clocks | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-image-map-hotlinking | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+---
+
 ## Adding This Submodule
 
 ```bash
