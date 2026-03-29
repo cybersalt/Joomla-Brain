@@ -291,6 +291,167 @@ $results = $db->loadColumn();
 
 ---
 
+## Subform Custom Field (Repeatable Fields)
+
+Subform fields allow repeatable groups of fields — e.g., multiple quiz questions per article. **This is the most complex custom field type to set up programmatically.**
+
+### CRITICAL: How Subform Fields Work
+
+Joomla's `SubformField` class reads `multiple`, `min`, `max`, `buttons`, and `layout` from the **field's XML attributes**, NOT from `fieldparams` JSON. This means:
+
+- Setting `"multiple":"true"` in `fieldparams` JSON **DOES NOTHING**
+- Setting attributes via `onContentPrepareForm` / `setFieldAttribute()` **DOES NOT WORK** because custom fields are added to the form AFTER that event fires
+- The ONLY way to control subform behavior is via `onCustomFieldsPrepareDom` in a fields plugin
+
+### The Correct Approach: Custom Field Type via Fields Plugin
+
+**Step 1:** Create a custom field type (e.g., `cslearningquiz`) — NOT `subform`
+
+**Step 2:** Register the type in your fields plugin:
+
+```php
+class MyFieldsPlugin extends FieldsPlugin
+{
+    // THIS is the method that tells Joomla which types this plugin handles
+    // It is NOT getTypesInfo() — that method doesn't exist!
+    public function onCustomFieldsGetTypes(): array
+    {
+        return [
+            ['type' => 'mytopics'],
+            ['type' => 'myquiz'],    // Our subform type
+        ];
+    }
+}
+```
+
+**Step 3:** In `onCustomFieldsPrepareDom`, set the subform attributes on the DOM node:
+
+```php
+public function onCustomFieldsPrepareDom($field, \DOMElement $parent, Form $form)
+{
+    if ($field->type === 'myquiz') {
+        $fieldNode = parent::onCustomFieldsPrepareDom($field, $parent, $form);
+        if (!$fieldNode) return $fieldNode;
+
+        // Transform this custom field type into a subform with repeatable
+        $fieldNode->setAttribute('type', 'subform');
+        $fieldNode->setAttribute('formsource', 'plugins/system/myplugin/forms/quiz_question.xml');
+        $fieldNode->setAttribute('multiple', 'true');
+        $fieldNode->setAttribute('min', '0');
+        $fieldNode->setAttribute('max', '50');
+        $fieldNode->setAttribute('buttons', 'add,remove,move');
+        $fieldNode->setAttribute('layout', 'joomla.form.field.subform.repeatable');
+        $fieldNode->setAttribute('groupByFieldset', '0');
+
+        return $fieldNode;
+    }
+
+    // Handle other field types...
+    return parent::onCustomFieldsPrepareDom($field, $parent, $form);
+}
+```
+
+**Step 4:** Create the subform XML definition (e.g., `plugins/system/myplugin/forms/quiz_question.xml`):
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+    <field name="question_type" type="list" label="Question Type" default="multiple_choice">
+        <option value="multiple_choice">Multiple Choice</option>
+        <option value="true_false">True / False</option>
+    </field>
+    <field name="question_text" type="textarea" label="Question" rows="3" />
+    <field name="option_a" type="text" label="Option A" />
+    <field name="option_b" type="text" label="Option B" />
+    <field name="correct_answer" type="list" label="Correct Answer">
+        <option value="a">Option A</option>
+        <option value="b">Option B</option>
+    </field>
+    <field name="explanation" type="textarea" label="Explanation" rows="2" />
+</form>
+```
+
+**Step 5:** Create the field programmatically with the custom type:
+
+```php
+$field = (object) [
+    'title'       => 'Quiz Questions',
+    'name'        => 'my-quiz-questions',
+    'type'        => 'myquiz',  // NOT 'subform' — use your custom type
+    'context'     => 'com_content.article',
+    'group_id'    => $groupId,
+    'state'       => 1,
+    'fieldparams' => '{}',  // Subform attributes are set in onCustomFieldsPrepareDom, NOT here
+    // ... other standard field properties
+];
+$db->insertObject('#__fields', $field, 'id');
+```
+
+### Subform Layout Options
+
+| Layout | Description |
+|--------|-------------|
+| `joomla.form.field.subform.repeatable` | Stacked/card layout — fields vertically within each row |
+| `joomla.form.field.subform.repeatable-table` | Table layout — fields as columns, rows as table rows |
+
+### What DOES NOT Work (Common Mistakes)
+
+| Approach | Why It Fails |
+|----------|-------------|
+| Setting `"multiple":"true"` in `fieldparams` JSON | SubformField reads from XML attributes, not fieldparams |
+| Using `onContentPrepareForm` to `setFieldAttribute()` | Custom fields are added AFTER this event fires |
+| Using `getXml()->xpath()` to modify the form XML | Same timing issue — fields not yet added |
+| Using `type="subform"` directly as custom field type | Works but renders as single non-repeatable row with no buttons |
+| Overriding `getTypesInfo()` | This method doesn't exist — use `onCustomFieldsGetTypes()` |
+
+### Reading Subform Values on the Frontend
+
+Subform data is stored as JSON in `#__fields_values.value`. To read it:
+
+```php
+$db = Factory::getContainer()->get('DatabaseDriver');
+
+// Get the field ID
+$query = $db->getQuery(true)
+    ->select('id')
+    ->from('#__fields')
+    ->where('name = ' . $db->quote('my-quiz-questions'))
+    ->where('context = ' . $db->quote('com_content.article'));
+$db->setQuery($query);
+$fieldId = (int) $db->loadResult();
+
+// Get the JSON value for a specific article
+$query = $db->getQuery(true)
+    ->select('value')
+    ->from('#__fields_values')
+    ->where('field_id = ' . $fieldId)
+    ->where('item_id = ' . $db->quote((string) $articleId));
+$db->setQuery($query);
+$json = $db->loadResult();
+
+$questions = json_decode($json, true);
+// $questions is an array of arrays, each containing the subform field values
+```
+
+### Trashed Fields Gotcha
+
+When a user deletes a custom field via the Joomla UI, it goes to **trash** (`state = -2`), not permanently deleted. Your `ensureField` check must account for this:
+
+```php
+// Check for existing field INCLUDING trashed ones
+$query->select(['id', 'state'])
+    ->from('#__fields')
+    ->where('name = ' . $db->quote($fieldName))
+    ->where('context = ' . $db->quote('com_content.article'));
+
+// If found but trashed, republish it
+if ($existing && (int) $existing->state !== 1) {
+    // UPDATE state = 1
+}
+```
+
+---
+
 ## Notes
 
 For multi-select UI (fancy-select layout), see `JOOMLA5-MODULE-GUIDE.md` Form Field Best Practices section.
@@ -299,3 +460,5 @@ For multi-select UI (fancy-select layout), see `JOOMLA5-MODULE-GUIDE.md` Form Fi
 2. Use `try/catch` and log errors - don't let field creation failures break the installation
 3. The `name` field is used for database queries; the `title` and `label` are for display
 4. Field params (`fieldparams`) control the field's behavior; params (`params`) are for additional metadata
+5. For subform fields, use a **custom field type** handled by your fields plugin — do NOT use `type="subform"` directly
+6. The `onCustomFieldsGetTypes()` method (NOT `getTypesInfo()`) is what Joomla's FieldsPlugin uses to determine supported types

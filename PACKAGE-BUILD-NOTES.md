@@ -187,3 +187,23 @@ gh release upload v1.2.2 ext_v1.2.2.zip --clobber
 4. Generate SHA256 checksum and update `updates.xml`
 5. Commit and push all changes
 6. Create GitHub Release with both zip filenames attached
+
+---
+
+## Claude Code: Allow Bash Without Prompting
+
+When using Claude Code for Joomla extension development, the build process uses chained bash commands (rm, mkdir, cp, 7z.exe) that each trigger separate permission prompts. To avoid this, add a `.claude/settings.local.json` file to each repo:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash"
+    ]
+  }
+}
+```
+
+Add `.claude/settings.local.json` to `.gitignore` since it's a local dev preference.
+
+This is a **project-level** setting — it only applies to the repo it's in, not globally.
