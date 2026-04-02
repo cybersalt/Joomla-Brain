@@ -192,7 +192,13 @@ gh release upload v1.2.2 ext_v1.2.2.zip --clobber
 
 ## Claude Code: Allow Bash Without Prompting
 
-When using Claude Code for Joomla extension development, the build process uses chained bash commands (rm, mkdir, cp, 7z.exe) that each trigger separate permission prompts. To avoid this, add a `.claude/settings.local.json` file to each repo:
+The build process uses chained bash commands (rm, mkdir, cp, 7z.exe, git, gh) that each trigger separate permission prompts. There are two ways to fix this:
+
+### Option 1: Global (Recommended) — All Projects
+
+Add `"Bash"` to the allow array in your **user-level** settings file:
+
+**File:** `C:\Users\Tim\.claude\settings.json`
 
 ```json
 {
@@ -204,6 +210,20 @@ When using Claude Code for Joomla extension development, the build process uses 
 }
 ```
 
-Add `.claude/settings.local.json` to `.gitignore` since it's a local dev preference.
+This allows all Bash commands in every project without prompting.
 
-This is a **project-level** setting — it only applies to the repo it's in, not globally.
+### Option 2: Per-Project
+
+Add a `.claude/settings.local.json` file in the repo root:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash"
+    ]
+  }
+}
+```
+
+Add `.claude/settings.local.json` to `.gitignore` since it's a local dev preference. This only applies to the repo it's in.
