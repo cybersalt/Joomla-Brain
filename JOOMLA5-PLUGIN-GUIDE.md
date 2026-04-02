@@ -563,9 +563,85 @@ See [cs-joomla-router-tracer](https://github.com/cybersalt/cs-joomla-router-trac
 
 ---
 
+## Lessons Learned from cs-siteground-cache-for-joomla
+
+### Language Files: .ini vs .sys.ini
+
+**Problem**: System plugin strings (toolbar buttons, admin notices) showed as raw keys (`PLG_SYSTEM_MYPLUGIN_SOMETHING`) on most admin pages, but worked on the plugin settings page.
+
+**Cause**: Joomla only auto-loads `.sys.ini` globally. The `.ini` file is only loaded when viewing the plugin's own settings. If your plugin injects UI (toolbar buttons, notices) on every admin page, those strings must be in `.sys.ini`.
+
+**Solution**: Either:
+1. Put all globally-needed strings in both `.ini` AND `.sys.ini`
+2. Call `$this->loadLanguage()` in `onAfterInitialise` (CMSPlugin built-in method — knows all install paths)
+
+Do NOT use manual `$app->getLanguage()->load()` with hardcoded paths — it's fragile. Use `$this->loadLanguage()`.
+
+### Custom Field Types: addfieldprefix Required
+
+**Problem**: Custom field types (e.g., `type="purgebutton"`) render as plain text inputs instead of the custom UI.
+
+**Cause**: Missing `addfieldprefix` attribute. Joomla doesn't know to look in your plugin's namespace for field classes.
+
+**Fix**: Add to the `<fields>` tag in the manifest:
+```xml
+<fields name="params" addfieldprefix="Cybersalt\Plugin\System\MyPlugin\Field">
+```
+
+### Injecting into Atum Admin Header Bar
+
+To add a button to the top header bar that matches native styling (Clean Cache, site link, etc.), inject into the `.header-items` container using the exact Atum HTML pattern:
+
+```php
+// In onAfterRender for admin:
+$body = $app->getBody();
+$buttonHtml = '<div class="header-item"><a href="javascript:" class="header-item-content" onclick="myAction()" title="My Button"><div class="header-item-icon"><span class="icon-trash" aria-hidden="true"></span></div><div class="header-item-text">My Button</div></a></div>';
+
+$body = preg_replace('/(<div[^>]*class="[^"]*header-items[^"]*"[^>]*>)/i', '$1' . $buttonHtml, $body, 1);
+$app->setBody($body);
+```
+
+Key: use `header-item` > `header-item-content` > `header-item-icon` + `header-item-text` structure. Do NOT use Bootstrap `btn` classes — they override Atum's native styling.
+
+### onAfterRespond May Not Fire on Admin Save+Redirect
+
+**Problem**: When saving content in admin, Joomla does a POST then 302 redirect. `onAfterRespond` may not fire reliably, so deferred operations (like cache purge queues) are lost.
+
+**Solution**: Register a PHP shutdown function as fallback:
+```php
+register_shutdown_function([$this, 'processQueue']);
+```
+Use a static guard to prevent double execution if `onAfterRespond` also fires.
+
+### Custom Multi-Select Field for Installed Components
+
+To let users select from installed Joomla components, create a custom field extending `ListField`:
+
+```php
+class ComponentselectField extends ListField
+{
+    protected function getOptions(): array
+    {
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
+        $query = $db->getQuery(true)
+            ->select(['element', 'name'])
+            ->from('#__extensions')
+            ->where('type = ' . $db->quote('component'))
+            ->where('enabled = 1')
+            ->order('name ASC');
+        // ... build options from results
+    }
+}
+```
+
+In manifest use `layout="joomla.form.field.list-fancy-select"` with `multiple="true"` for the searchable tag-style selector.
+
+---
+
 ## Example Repositories
 
 - [cs-browser-page-title](https://github.com/cybersalt/cs-browser-page-title) - System plugin that sets browser page title from custom field value
+- [cs-siteground-cache-for-joomla](https://github.com/cybersalt/cs-siteground-cache-for-joomla) - System plugin with admin header button injection, inline log viewer, custom field types, UNIX socket IPC, shutdown function fallback
 
 ---
 
