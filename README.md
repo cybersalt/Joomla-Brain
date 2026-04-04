@@ -4,6 +4,20 @@ This repository contains best practices, scripts, and documentation for Joomla c
 
 > **Disclaimer**: This is a living document that evolves as we learn, build, and correct mistakes. Content may change at any time — patterns may be revised, guidance may be updated, and errors may be fixed as our understanding of Joomla development deepens. Always check for updates.
 
+## ⚠️ SECURITY IS THE #1 PRIORITY
+
+**Every piece of code we write must be developed with security as the primary focus.** This is non-negotiable for all Cybersalt extensions, whether internal or public.
+
+Before writing any code, consider:
+- **SQL Injection**: Always use `$db->quote()`, `$db->quoteName()`, prepared statements. Never concatenate user input into queries.
+- **XSS**: Always escape output — `htmlspecialchars()` for HTML, `esc()` helper for JavaScript `innerHTML`, DOM APIs over string concatenation.
+- **CSRF**: Always check `Session::checkToken()` on form submissions and AJAX handlers.
+- **Access Control**: Always verify user permissions (`$user->authorise()`) before data modifications.
+- **Information Disclosure**: Never expose raw exception messages, SQL errors, or file paths to users. Log them and show generic messages.
+- **Input Validation**: Always validate ORDER BY columns against an explicit allowlist. Always validate and sanitize user input.
+
+See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions" for the full checklist.
+
 ## Contents
 
 ### Guides (Detailed References)
