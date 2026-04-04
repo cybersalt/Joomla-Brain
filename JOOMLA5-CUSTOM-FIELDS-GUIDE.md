@@ -291,6 +291,64 @@ $results = $db->loadColumn();
 
 ---
 
+## Registering a Custom Field Context for Your Component
+
+To allow custom fields on your component's own entities (e.g., topics, products), register a custom field context.
+
+### Required Interface and Trait
+
+```php
+use Joomla\CMS\Fields\FieldsFormServiceInterface;
+use Joomla\CMS\Fields\FieldsServiceTrait;
+
+class MyComponent extends MVCComponent implements FieldsFormServiceInterface
+{
+    use FieldsServiceTrait;
+
+    public function validateSection($section, ?Form $form = null): ?string
+    {
+        if ($section === 'topic') {
+            return 'topic';
+        }
+        return null;
+    }
+
+    public function getContexts(): array
+    {
+        Factory::getLanguage()->load('com_mycomp', JPATH_ADMINISTRATOR);
+        return [
+            'com_mycomp.topic' => Text::_('COM_MYCOMP_CONTEXT_TOPIC'),
+        ];
+    }
+}
+```
+
+### Model Requirements
+
+The model must set `$typeAlias` for custom fields to save/load:
+
+```php
+class TopicModel extends AdminModel
+{
+    public $typeAlias = 'com_mycomp.topic';
+}
+```
+
+### ⚠️ CRITICAL WARNING: Version Compatibility
+
+**`FieldsFormServiceInterface` may not exist in all Joomla 5.x versions.** In Joomla 5.4.3, importing this interface caused a fatal error that crashed the entire site (ERR_HTTP2_PROTOCOL_ERROR — no error page, just a connection drop).
+
+**If the interface causes a fatal error:** Fall back to storing the data in your component's own table columns instead of using Joomla custom fields. This is simpler and guaranteed to work:
+
+```sql
+ALTER TABLE #__mycomp_topics ADD COLUMN show_quiz TINYINT(1) DEFAULT 0;
+ALTER TABLE #__mycomp_topics ADD COLUMN quiz_passing_score VARCHAR(10) DEFAULT '';
+```
+
+Then add the fields to your form XML and they save/load through the normal Table class.
+
+---
+
 ## Subform Custom Field (Repeatable Fields)
 
 Subform fields allow repeatable groups of fields — e.g., multiple quiz questions per article. **This is the most complex custom field type to set up programmatically.**

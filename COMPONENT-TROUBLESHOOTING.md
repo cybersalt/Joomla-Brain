@@ -562,6 +562,51 @@ These apply to modules using the Dispatcher pattern:
 
 ---
 
+## Admin Sidebar Menu Icons (Atum Template)
+
+**Problem:** Setting `img="class:book"` or other class-based icons in the component manifest `<menu>` tag does NOT render icons in Joomla 5's Atum admin sidebar.
+
+**Why:** Atum's sidebar renderer only outputs the `title` column content. The `img` column with `class:` prefix is ignored for third-party components.
+
+**Solution:** Embed the `<img>` tag directly in the menu item's title via the install script:
+
+```php
+// In your package install script (postflight)
+$icon  = "<img src='components/com_mycomp/assets/images/icon-16.svg' width='16' height='16'> ";
+$title = $icon . 'My Component';
+
+$query = $db->getQuery(true)
+    ->update($db->quoteName('#__menu'))
+    ->set($db->quoteName('title') . ' = ' . $db->quote($title))
+    ->where($db->quoteName('client_id') . ' = 1')
+    ->where($db->quoteName('link') . ' = ' . $db->quote('index.php?option=com_mycomp'))
+    ->where($db->quoteName('level') . ' = 1');
+$db->setQuery($query);
+$db->execute();
+```
+
+**Important:** Use single quotes in the `<img>` tag (not double quotes) to avoid breaking the `aria-label` attribute that Joomla wraps around the title.
+
+Include the icon file in `admin/assets/images/` and add `<folder>assets</folder>` to the manifest's `<files>` section.
+
+---
+
+## Security Checklist for Public Extensions
+
+Before releasing any extension publicly, audit for these vulnerabilities (advice from Yannick Gaultier, Weeblr llc):
+
+- [ ] **SQL Injection** — always use `$db->quote()`, `$db->quoteName()`, prepared statements, or query builder. Never concatenate user input into queries.
+- [ ] **XSS** — always escape output with `htmlspecialchars()` or `$this->escape()`. Never echo raw user input.
+- [ ] **CSRF** — always check tokens with `Session::checkToken()` on form submissions and AJAX calls.
+- [ ] **Access Control** — verify user permissions before any data modification.
+- [ ] **File Uploads** — validate file types, sizes, and paths. Never trust user-provided filenames.
+- [ ] **Path Traversal** — sanitize any user-provided file paths. Use `basename()` and validate against allowed directories.
+- [ ] **Information Disclosure** — don't expose database errors, file paths, or configuration details to frontend users.
+
+> "The biggest risk in building and releasing an extension to the public is having vulnerabilities and having your clients' sites hacked." — Yannick Gaultier
+
+---
+
 ## Resources
 
 - [Joomla 5.3 Pagination API](https://api.joomla.org/cms-5/classes/Joomla-CMS-Pagination-Pagination.html)
