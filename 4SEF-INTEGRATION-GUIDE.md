@@ -18,14 +18,14 @@ The simplest integration — no native 4SEF plugin needed.
 **4SEF can ONLY intercept URLs that go through Joomla's `Route::_()` function.**
 
 ```php
-// ✅ CORRECT — 4SEF captures this
+// ✅ CORRECT — uses Joomla API
 $url = Route::_('index.php?option=com_mycomp&view=articles&topic_id=' . $id . '&Itemid=' . $itemId);
 
-// ❌ WRONG — 4SEF never sees this, URLs will 404
+// ❌ WRONG — bypasses Joomla API entirely
 $url = Uri::root(true) . '/' . $menuAlias . '/' . $topicAlias;
 ```
 
-Manual string concatenation bypasses Joomla's routing system entirely. 4SEF has no way to capture or resolve these URLs.
+**This is not just a 4SEF issue — it's a Joomla development rule.** All extensions should always use `Route::_()` for building links, with or without 4SEF. Manual URL construction breaks when users change their menus, switch SEF settings, or use any SEF extension.
 
 ### View Parameter Matters
 
@@ -39,12 +39,17 @@ Route::_('index.php?option=com_mycomp&view=articles&topic_id=5&Itemid=100');
 Route::_('index.php?option=com_mycomp&view=topics&topic_id=5&Itemid=100');
 ```
 
-### After Any URL Change
-Always **purge 4SEF URLs** after:
-- Installing/updating the component
-- Changing URL structure in code
+### When to Purge 4SEF URLs
+
+**Purge sparingly** — purging causes temporary 404s until URLs are rebuilt.
+
+**DO purge after:**
+- Changing URL structure in your component code
 - Switching between Bypass/Joomla SEF/Normal modes
-- Moving menu items
+
+**DO NOT purge after:**
+- Installing/updating the component (unless URL structure changed)
+- Moving menu items (4SEF does not use menu items to build URLs)
 
 ---
 
