@@ -25,6 +25,7 @@ See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions
 - `JOOMLA5-PLUGIN-GUIDE.md`: Full plugin development guide (Content + System plugins)
 - `JOOMLA5-COMPONENT-ROUTING.md`: Component SEF routing with RouterBase
 - `JOOMLA5-CUSTOM-FIELDS-GUIDE.md`: Creating custom fields programmatically
+- `JOOMLA5-UPDATE-SERVER-GUIDE.md`: Update server setup, authenticated downloads, `/extension.xml` behavior
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
 - `JOOMLA3-PLUGIN-GUIDE.md`: Legacy Joomla 3 plugin reference

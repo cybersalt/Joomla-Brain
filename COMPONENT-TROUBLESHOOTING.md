@@ -607,6 +607,166 @@ Before releasing any extension publicly, audit for these vulnerabilities (advice
 
 ---
 
+## ComponentHelper::getParams() Cache Issues
+
+**CRITICAL**: `ComponentHelper::getParams()` caches params at the start of the request. If you write params to `#__extensions` and then read them back via `ComponentHelper::getParams()` in the same request (or in a redirect that Joomla processes quickly), you get stale data.
+
+### When This Bites You
+
+- **Install scripts**: `postflight()` writes params via direct DB query, then another method reads them via `ComponentHelper::getParams()` — gets empty/old values
+- **Controller actions**: `saveParam()` writes to DB, redirects to a view that reads via `ComponentHelper::getParams()` — may get stale cache
+- **Wizard flows**: Write email/config in one action, redirect to dashboard that checks if email is linked — dashboard sees old cached value
+
+### The Fix: Read Directly from DB
+
+```php
+// DON'T do this after writing params in the same request:
+$params = ComponentHelper::getParams('com_yourext');
+$value = $params->get('my_key'); // May be stale!
+
+// DO this instead:
+$db = Factory::getContainer()->get(DatabaseInterface::class);
+$query = $db->getQuery(true)
+    ->select($db->quoteName('params'))
+    ->from($db->quoteName('#__extensions'))
+    ->where($db->quoteName('element') . ' = ' . $db->quote('com_yourext'))
+    ->where($db->quoteName('type') . ' = ' . $db->quote('component'));
+$paramsJson = $db->setQuery($query)->loadResult() ?: '{}';
+$params = new \Joomla\Registry\Registry($paramsJson);
+$value = $params->get('my_key'); // Always fresh
+```
+
+### Where to Use Direct DB Read
+
+- Install/update script `postflight()` methods
+- Controller actions that save params and then redirect to a view
+- Any View class that needs params written during the current session
+- The safe rule: if you call `saveParam()` anywhere in the request chain, read from DB
+
+---
+
+## Form Validation — `Joomla.submitbutton` isValid Error
+
+**Error**: `Uncaught TypeError: Cannot read properties of undefined (reading 'isValid')` when clicking Save/Apply on admin edit forms.
+
+**Cause**: The form has `class="form-validate"` but Joomla's form validator script isn't loaded.
+
+**Fix**: Load it via WebAssetManager at the top of every edit template:
+
+```php
+<?php
+$wa = Factory::getApplication()->getDocument()->getWebAssetManager();
+$wa->useScript('form.validate');
+?>
+
+<form ... class="form-validate">
+```
+
+**Every admin edit template** (`edit.php`) that uses `class="form-validate"` MUST include this. List templates (`default.php`) don't need it.
+
+---
+
+## Bootstrap JS on Frontend (Site Side)
+
+Joomla's admin backend (Atum template) loads Bootstrap JS automatically. **The frontend does NOT.** If your site-side template uses Bootstrap modals, collapse, tooltips, or other JS-dependent features, you must explicitly load them.
+
+```php
+<?php
+$wa = Factory::getApplication()->getDocument()->getWebAssetManager();
+$wa->useScript('bootstrap.modal');     // For modals
+$wa->useScript('bootstrap.collapse');  // For collapse/accordion
+$wa->useScript('bootstrap.tooltip');   // For tooltips
+$wa->useScript('bootstrap.dropdown');  // For dropdowns
+?>
+```
+
+**Common symptom**: Clicking a button with `data-bs-toggle="modal"` does nothing — the button gets a red outline (CSS is loaded) but the modal doesn't open (JS is missing).
+
+---
+
+## Custom Form Field Types — addfieldprefix
+
+When using custom form field types (classes in your component's `src/Field/` directory), Joomla needs to know where to find them. Without `addfieldprefix`, the field renders as an empty dropdown.
+
+**Fix**: Add `addfieldprefix` to the `<fields>` or `<fieldset>` element in your form XML:
+
+```xml
+<!-- Filter forms -->
+<fields name="filter" addfieldprefix="Cybersalt\Component\YourExt\Administrator\Field">
+    <field name="my_field" type="mycustomtype" ... />
+</fields>
+
+<!-- Edit forms -->
+<fieldset name="details" addfieldprefix="Cybersalt\Component\YourExt\Administrator\Field">
+    <field name="my_field" type="mycustomtype" ... />
+</fieldset>
+```
+
+The field class must follow Joomla's naming convention:
+- Type `mycustomtype` → Class `MycustomtypeField` in file `src/Field/MycustomtypeField.php`
+- Type `packageselect` → Class `PackageselectField` in file `src/Field/PackageselectField.php`
+
+**Common symptom**: Dropdown is completely empty (no options), or field doesn't render at all.
+
+---
+
+## Frontend Controller Actions — Use POST Forms, Not GET Links
+
+For actions on the frontend (deactivate, delete, report, etc.), **always use POST forms** instead of GET anchor links.
+
+**Why**:
+1. GET links put `task=controller.action` in the URL, which SEF routers mangle (e.g., turning dots into path separators)
+2. Destructive actions should use POST per HTTP semantics
+3. CSRF tokens are safer in POST body than URL parameters
+
+**Pattern**:
+
+```php
+<form action="<?php echo $actionUrl; ?>" method="post" class="d-inline">
+    <input type="hidden" name="task" value="installations.deactivate">
+    <input type="hidden" name="id" value="<?php echo (int) $item->id; ?>">
+    <?php echo HTMLHelper::_('form.token'); ?>
+    <button type="submit" class="btn btn-outline-warning btn-sm"
+        onclick="return confirm('Are you sure?');">
+        Deactivate
+    </button>
+</form>
+```
+
+**And always include Itemid** in the action URL for correct template assignment:
+```php
+$activeItemId = Factory::getApplication()->getInput()->getInt('Itemid', 0);
+$actionUrl = Route::_('index.php?option=com_yourext&Itemid=' . $activeItemId);
+```
+
+**Also in controller redirects** — look up the menu item and include Itemid:
+```php
+private function getReturnUrl(): string
+{
+    $app = Factory::getApplication();
+    $itemId = $app->getInput()->getInt('Itemid', 0);
+
+    if (!$itemId) {
+        $menuItems = $app->getMenu()->getItems('component', 'com_yourext');
+        foreach ($menuItems as $mi) {
+            if (($mi->query['view'] ?? '') === 'yourview') {
+                $itemId = $mi->id;
+                break;
+            }
+        }
+    }
+
+    $url = 'index.php?option=com_yourext&view=yourview';
+    if ($itemId) {
+        $url .= '&Itemid=' . $itemId;
+    }
+
+    return Route::_($url, false);
+}
+```
+
+---
+
 ## Resources
 
 - [Joomla 5.3 Pagination API](https://api.joomla.org/cms-5/classes/Joomla-CMS-Pagination-Pagination.html)

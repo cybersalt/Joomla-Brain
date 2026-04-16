@@ -23,6 +23,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 ### Components
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
+| [cs-download-id-manager](https://github.com/cybersalt/cs-download-id-manager) | Component | CS Update Access Manager — membership-gated update access for pro extensions | Joomla 5 native (admin+site+API, custom fields, update server, email notifications, domain blocking) |
 | [cs-filter-by-meta](https://github.com/cybersalt/cs-filter-by-meta) | Component | Content meta audit tool | Joomla 5 |
 | [cs-talkback-to-joomla](https://github.com/cybersalt/cs-talkback-to-joomla) | Component | TalkBack to JComments migration tool | Joomla 5 native |
 | [CS-Chronoforms-Convert-to-Convert-Forms](https://github.com/cybersalt/CS-Chronoforms-Convert-to-Convert-Forms) | Component | CF6 to Convert Forms migration tool | Joomla 3 (legacy MVC) |
