@@ -320,6 +320,141 @@ If you already have a hand-rolled filter bar, migrate in this order:
 
 ---
 
+## Pagination limit options — mirror Joomla core
+
+Joomla 5 and Joomla 6 use the same set of limit values everywhere (`HTMLHelper::_('select.limitbox', …)`). Your list view must offer the **same options** or it'll stand out. Use:
+
+```php
+protected array $limitOptions = [5, 10, 15, 20, 25, 30, 50, 100, 500, 0];
+// 0 renders as "All" (display the total with no LIMIT clause)
+```
+
+Rendering:
+
+```php
+<?php foreach ($this->limitOptions as $lim) : ?>
+    <option value="<?php echo $lim; ?>" <?php echo (int) $filter['limit'] === $lim ? 'selected' : ''; ?>>
+        <?php echo $lim === 0 ? Text::_('JALL') : (int) $lim; ?>
+    </option>
+<?php endforeach; ?>
+```
+
+In the model / adapter, treat `$limit = 0` as "no LIMIT" so queries honour the "All" choice:
+
+```php
+$limitClause = $limit > 0 ? "LIMIT {$offset}, {$limit}" : '';
+```
+
+---
+
+## Mapping screens — safe defaults and bulk actions
+
+If your component has a **mapping table** (a per-row action picker deciding how each source record lands in the destination — e.g. per-category routing, per-user-group routing), these rules keep it safe and usable.
+
+### Default every row to "Skip"
+
+When the user first lands on the mapping screen, **every row's action must default to Skip** (or an equivalent no-op). A source with hundreds of categories / groups must not automatically clone all of them just because the page rendered.
+
+```php
+// In the template
+$override = $overrides[$sourceId] ?? ['action' => 'skip'];   // not 'auto'
+$action   = $override['action'];
+```
+
+```php
+// In the mapper helper
+$action = $this->overrides[$sourceId]['action'] ?? 'skip';
+```
+
+### Offer a "Set all to…" bulk dropdown
+
+Paired with the safe default, give users who want the old auto-create-everything behaviour a one-click path:
+
+```html
+<div class="btn-group" role="group">
+    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle"
+            data-bs-toggle="dropdown" aria-expanded="false">
+        Set all to…
+    </button>
+    <ul class="dropdown-menu">
+        <li><button type="button" class="dropdown-item"
+                    data-example-action="setAllMappingAction" data-example-arg="skip">
+            <strong>Skip</strong>
+            <br><small class="text-muted">Reset everything to do-nothing.</small>
+        </button></li>
+        <li><button type="button" class="dropdown-item"
+                    data-example-action="setAllMappingAction" data-example-arg="auto">
+            <strong>Auto</strong>
+            <br><small class="text-muted">Smart: match existing by path / title, create if missing.</small>
+        </button></li>
+        <li><button type="button" class="dropdown-item"
+                    data-example-action="setAllMappingAction" data-example-arg="create">
+            <strong>Create new</strong>
+            <br><small class="text-muted">Force-create a brand-new destination for every source.</small>
+        </button></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><button type="button" class="dropdown-item"
+                    data-example-action="setAllMappingAction" data-example-arg="auto-matching-only">
+            <strong>Auto for matching, Skip for the rest</strong>
+            <br><small class="text-muted">Sets Auto on rows whose auto-match badge shows a match, leaves the rest on Skip.</small>
+        </button></li>
+    </ul>
+</div>
+```
+
+Every dropdown item includes a short muted description so users know what they're about to do.
+
+JS — mirrors show/hide of the auxiliary inputs (destination picker, new-title input) so a bulk change behaves exactly like changing each row by hand:
+
+```js
+setAllMappingAction(action) {
+    const rows = document.querySelectorAll('#mapping-table tr[data-source-id]');
+    rows.forEach(row => {
+        const sel = row.querySelector('.row-action');
+        if (!sel) return;
+        let target = action;
+        if (action === 'auto-matching-only') {
+            const badge = row.querySelector('td.match-col .badge');
+            const hasMatch = badge && /bg-(success|info)/.test(badge.className);
+            target = hasMatch ? 'auto' : 'skip';
+        }
+        sel.value = target;
+        const dest  = row.querySelector('.row-dest');
+        const title = row.querySelector('.row-new-title');
+        if (dest)  dest.style.display  = (target === 'map') ? '' : 'none';
+        if (title) title.style.display = (target === 'create') ? '' : 'none';
+    });
+}
+```
+
+### Help tooltip on every option + button
+
+Every dropdown option and every header button needs a one-line `title` tooltip explaining what it does. Never assume the user knows the difference between "Auto" and "Map". Language-file suffix convention: `_HINT`.
+
+```ini
+COM_EXAMPLE_ACTION_SKIP="Skip"
+COM_EXAMPLE_ACTION_SKIP_HINT="Do nothing with this source record. Items in it fall back to the destination default."
+COM_EXAMPLE_ACTION_AUTO="Auto"
+COM_EXAMPLE_ACTION_AUTO_HINT="Match this source record to a destination with the same path or title. If no match exists, create a new one."
+COM_EXAMPLE_ACTION_MAP="Map to existing"
+COM_EXAMPLE_ACTION_MAP_HINT="Route this source record into a specific existing destination you pick from the dropdown."
+COM_EXAMPLE_ACTION_CREATE="Create new"
+COM_EXAMPLE_ACTION_CREATE_HINT="Create a brand-new destination with the title you type."
+```
+
+Applied per option:
+
+```php
+<option value="skip"   title="<?php echo Text::_('COM_EXAMPLE_ACTION_SKIP_HINT'); ?>">Skip</option>
+<option value="auto"   title="<?php echo Text::_('COM_EXAMPLE_ACTION_AUTO_HINT'); ?>">Auto</option>
+<option value="map"    title="<?php echo Text::_('COM_EXAMPLE_ACTION_MAP_HINT'); ?>">Map to existing</option>
+<option value="create" title="<?php echo Text::_('COM_EXAMPLE_ACTION_CREATE_HINT'); ?>">Create new</option>
+```
+
+Put matching `title` attributes on the Save / Copy / Reset buttons in the card header too.
+
+---
+
 ## Sanity check
 
 Before shipping a list view, the filter bar should:
@@ -332,7 +467,17 @@ Before shipping a list view, the filter bar should:
 - [ ] Every dropdown auto-submits on change.
 - [ ] Column headers are sort links with direction arrow.
 - [ ] Pagination preserves filter state.
+- [ ] Limit dropdown offers 5 / 10 / 15 / 20 / 25 / 30 / 50 / 100 / 500 / All (matching Joomla core).
 - [ ] Count cards at the top (if any) are clickable links.
 - [ ] Page looks the same in light and dark admin themes.
+
+If the view has a mapping table:
+
+- [ ] Every row's default override action is Skip (safe no-op).
+- [ ] The card header has a "Set all to…" dropdown with at least Skip / Auto / Create new.
+- [ ] Each bulk-action dropdown item has a one-line description.
+- [ ] Every per-row action `<option>` has a `title` tooltip (key suffix `_HINT`).
+- [ ] Save / Copy / Reset buttons in the card header have `title` tooltips.
+- [ ] JS bulk-action handler mirrors show/hide of auxiliary inputs (destination picker / new-title input).
 
 Ship it.
