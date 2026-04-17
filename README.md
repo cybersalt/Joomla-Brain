@@ -26,6 +26,7 @@ See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions
 - `JOOMLA5-COMPONENT-ROUTING.md`: Component SEF routing with RouterBase
 - `JOOMLA5-CUSTOM-FIELDS-GUIDE.md`: Creating custom fields programmatically
 - `JOOMLA5-UPDATE-SERVER-GUIDE.md`: Update server setup, authenticated downloads, `/extension.xml` behavior
+- `JOOMLA5-LIST-FILTERS-GUIDE.md`: Admin list views — js-stools filter bar, Choices.js on every select, sortable column headers, pagination, clickable count cards (match native Article Manager / User Manager)
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
 - `JOOMLA3-PLUGIN-GUIDE.md`: Legacy Joomla 3 plugin reference
