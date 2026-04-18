@@ -29,6 +29,7 @@ See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions
 - `JOOMLA5-LIST-FILTERS-GUIDE.md`: Admin list views — js-stools filter bar, Choices.js on every select, sortable column headers, pagination, clickable count cards (match native Article Manager / User Manager)
 - `JOOMLA5-LANGUAGE-FILES-GOTCHAS.md`: Where Joomla actually loads language files from, INI encoding traps (em-dashes, smart quotes), plugin `.sys.ini` requirements, and why translations silently break
 - `JOOMLA5-UI-PATTERNS.md`: Cache-busting with filemtime, self-contained modal dialogs, dark mode CSS overrides, config page fieldset layouts, pre-flight dialog pattern for destructive operations, Joomlatools Files gotchas, Joomla API PATCH quirks
+- `JOOMLA5-EDGE-CASE-SCENARIOS.md`: Catalog of environmental / third-party conditions that break extensions and the patterns for detecting and handling them. Covers Akeeba Admin Tools `.htaccess` blocks, RewriteBase in subdirectory staging, Joomlatools Fileman container paths, Composer autoloader hash mismatches, non-standard log directories, CDN caching. Living reference — add new scenarios here as they're encountered.
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
 - `JOOMLA3-PLUGIN-GUIDE.md`: Legacy Joomla 3 plugin reference

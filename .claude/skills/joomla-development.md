@@ -666,3 +666,16 @@ Check these repos for working examples:
 - **Pre-flight dialog pattern** for destructive ops: detect issues via AJAX endpoint, show a single modal with one section per detected issue, each with its own "fix it" + "remember my choice" checkboxes. Store per-issue preferences as `ask | fix | skip` in component params.
 - **Joomlatools Files/Fileman gotcha**: `#__files_containers` stores *relative* paths; subdirectory-staging tools must include the top-level `joomlatools-files/` folder explicitly.
 - **Joomla Web Services API PATCH**: PowerShell `Invoke-RestMethod` silently fails — use curl with `-d @file.json`. Content field for writes is `introtext`, NOT `articletext` or `text`.
+
+## Edge-Case Scenarios (see `JOOMLA5-EDGE-CASE-SCENARIOS.md` for the catalog)
+
+Extensions that do real work against the filesystem, database, or other extensions should detect hosting/extension/config conditions that would normally break them and handle them gracefully with a pre-flight dialog pattern. Documented scenarios include:
+
+- **Akeeba Admin Tools `.htaccess` block** on `com_akeebabackup/installers/`
+- **`.htaccess` `RewriteBase`** directive breaking SEF URLs in subdirectory staging
+- **Joomlatools Files/Fileman asset folder** (`joomlatools-files/`) missing from the default copy list
+- **Composer autoloader hash mismatch** from size-only file-copy skip logic
+- **Non-standard Joomla log directory** causing `fwrite()` fatal on a false handle
+- **CDN caching** breaking hardcoded asset version cache busting
+
+The pre-flight dialog pattern (single modal, N conditional sections, per-issue `fix | skip | ask` preference, always-on audit log, self-heal on interruption) is documented in detail in the guide. Use it as the template when you encounter a new scenario to handle.
