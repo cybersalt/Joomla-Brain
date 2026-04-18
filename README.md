@@ -27,6 +27,8 @@ See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions
 - `JOOMLA5-CUSTOM-FIELDS-GUIDE.md`: Creating custom fields programmatically
 - `JOOMLA5-UPDATE-SERVER-GUIDE.md`: Update server setup, authenticated downloads, `/extension.xml` behavior
 - `JOOMLA5-LIST-FILTERS-GUIDE.md`: Admin list views — js-stools filter bar, Choices.js on every select, sortable column headers, pagination, clickable count cards (match native Article Manager / User Manager)
+- `JOOMLA5-LANGUAGE-FILES-GOTCHAS.md`: Where Joomla actually loads language files from, INI encoding traps (em-dashes, smart quotes), plugin `.sys.ini` requirements, and why translations silently break
+- `JOOMLA5-UI-PATTERNS.md`: Cache-busting with filemtime, self-contained modal dialogs, dark mode CSS overrides, config page fieldset layouts, pre-flight dialog pattern for destructive operations, Joomlatools Files gotchas, Joomla API PATCH quirks
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
 - `JOOMLA3-PLUGIN-GUIDE.md`: Legacy Joomla 3 plugin reference

@@ -647,3 +647,22 @@ Check these repos for working examples:
 - **Database schema identical to Joomla 5** (76 tables, same structure)
 - Only schema change: `#__history` table added `is_current` and `is_legacy` columns
 - Dark/light mode uses same CSS variables as Joomla 5 Atum template
+
+## Language File Gotchas (see `JOOMLA5-LANGUAGE-FILES-GOTCHAS.md` for full detail)
+
+- **Where Joomla loads from at runtime**: `administrator/language/{tag}/{tag}.com_xxx.ini` (the *system* location), not the component's own bundled copy. Package install copies bundled files into the system location.
+- **When hot-patching via FTP/API**: update BOTH the component-bundled copy AND the system copy, or the change won't take effect.
+- **Plugin Extensions Manager display**: requires a `.sys.ini` file declared in the plugin XML. Without it, plugin name/description show as raw `PLG_SYSTEM_XXX` keys.
+- **INI encoding trap**: never use em-dashes (`—`) or smart quotes inside INI values. They double-encode through some hosts/APIs and break the parser, causing every key defined AFTER the break to show as raw. Use HTML entities (`&mdash;`, `&ldquo;`, `&rdquo;`) — Joomla renders values as HTML anyway.
+- **Values must be wrapped in plain ASCII double quotes.** Curly quotes inside the wrapper break parsing.
+
+## UI Patterns (see `JOOMLA5-UI-PATTERNS.md` for full detail)
+
+- **Cache-bust CSS/JS with `filemtime()`**, not a hardcoded version string. Hardcoded versions cause CDN and browser caches to serve stale files across updates; filemtime auto-invalidates on every file change.
+- **Self-contained modal dialogs**: scope all CSS to `body.admin.com_xxx` to survive any admin template. Include dark-mode overrides keyed on `html[data-bs-theme="dark"]` AND `html[data-color-scheme="dark"]` — Joomla 5 uses the latter.
+- **Use `.css('display', 'block')` not jQuery `.show()`** — `.show()` silently fails against higher-specificity CSS.
+- **Config page fieldsets**: break long admin config into clearly separated fieldsets with `<legend>` headings. Put edge-case/rare-scenario settings in a visually distinct "Advanced" fieldset with a top border and intro paragraph.
+- **Keep labels short** — move context into the info/description popover. Long labels shift columns and break visual alignment.
+- **Pre-flight dialog pattern** for destructive ops: detect issues via AJAX endpoint, show a single modal with one section per detected issue, each with its own "fix it" + "remember my choice" checkboxes. Store per-issue preferences as `ask | fix | skip` in component params.
+- **Joomlatools Files/Fileman gotcha**: `#__files_containers` stores *relative* paths; subdirectory-staging tools must include the top-level `joomlatools-files/` folder explicitly.
+- **Joomla Web Services API PATCH**: PowerShell `Invoke-RestMethod` silently fails — use curl with `-d @file.json`. Content field for writes is `introtext`, NOT `articletext` or `text`.
