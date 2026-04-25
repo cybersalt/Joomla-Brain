@@ -55,10 +55,11 @@ You are assisting with Joomla extension development. Apply these patterns, conve
 - Core file is derived by stripping `/html/` and mapping the first segment: `layouts/…` → `<clientRoot>/layouts/…`; `com_X/<view>/<file>` → `<clientRoot>/components/com_X/tmpl/<view>/<file>`; `mod_X/<file>` → `<clientRoot>/modules/mod_X/tmpl/<file>`; `plg_<group>_<el>/<file>` → `JPATH_PLUGINS/<group>/<el>/tmpl/<file>` (always `JPATH_PLUGINS`, regardless of client_id).
 - Full reference: `JOOMLA5-TEMPLATE-OVERRIDES.md`.
 
-### 8. Manifest gotchas
+### 8. Manifest + script.php gotchas
 - **`HTMLHelper::_('script', $url, $options, $attribs)`** — `defer` is an HTML attribute, not a Joomla option. Putting it in `$options` (3rd arg) is silently dropped. Put it in `$attribs` (4th arg).
 - **Empty `sql/updates/mysql` folder** breaks install. Git doesn't track empty directories, so the folder drops out of the package zip. If the manifest's `<schemas>` block points at a non-existent path, install fails with `Joomla\Filesystem\Folder::files: Path is not a folder`. Either drop the `<schemas>` block when there are no update SQLs to ship, or add an `index.html` placeholder in the directory.
 - **Plugin manifest filename matches plugin element**, not `plg_group_X.xml`. So for plugin element `cstemplateintegrity`, the file is `cstemplateintegrity.xml`, not `plg_webservices_cstemplateintegrity.xml`.
+- **`postflight($type)` runs on uninstall too** — gate any "installed" success message AND any side effect (auto-enable a plugin, post-install task scheduling, etc.) on `$type` being `install` / `update` / `discover_install`. Without the gate, uninstall renders an "installed, click to open the dashboard" card pointing at a route that's about to disappear. If your package ships BOTH a package-level and a component-level `script.php`, fix both — the package one is easy to forget.
 
 ---
 

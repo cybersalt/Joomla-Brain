@@ -17,8 +17,9 @@ Follow this checklist in order when creating a new Joomla extension.
 - [ ] **Namespace** — `Cybersalt\Plugin\{Group}\{Name}`, `Cybersalt\Module\{Name}`, or `Cybersalt\Component\{Name}`
 - [ ] **Language system** — all strings translatable, `.ini` and `.sys.ini` files, language constants in XML
 - [ ] **Post-install link** — `script.php` with Bootstrap card UI linking to extension settings
+- [ ] **`postflight($type)` gates on `$type` before rendering the install card.** Joomla calls `postflight()` on **uninstall** too — without the gate, the user gets an "installed, click here to open the dashboard" card right after they hit Uninstall, often linking to a route that no longer exists. Early-return from `postflight()` when `$type` isn't one of `install`, `update`, `discover_install`. Same gate belongs around any postflight side effect that should only run on install/update (e.g. `enableWebservicesPlugin()` — don't auto-enable a plugin that's about to be removed).
 - [ ] **Dark mode safe** — Bootstrap classes only, no inline colors
-- [ ] **HTML-escape `Text::_()` in installer output** — `script.php`'s `postflight()` echoes into Joomla's installer frame; wrap every `Text::_()` in `htmlspecialchars(..., ENT_QUOTES \| ENT_SUBSTITUTE, 'UTF-8')` even when the strings are static today (a future translation file could carry markup that breaks the layout, or worse)
+- [ ] **HTML-escape `Text::_()` in installer output** — `script.php`'s `postflight()` echoes into Joomla's installer frame; wrap every `Text::_()` in `htmlspecialchars(..., ENT_QUOTES \| ENT_SUBSTITUTE, 'UTF-8')` even when the strings are static today (a future translation file could carry markup that breaks the layout, or worse). If your package ships a package-level `script.php` AND a component-level `script.php`, **fix both** — the package one is easy to forget.
 
 ## Security Baseline (MANDATORY for components and any extension that writes files)
 
