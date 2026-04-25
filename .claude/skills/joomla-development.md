@@ -31,6 +31,35 @@ You are assisting with Joomla extension development. Apply these patterns, conve
 - Use `layout="joomla.form.field.list-fancy-select"` for multi-select fields
 - Load asset: `$wa->useScript('webcomponent.field-fancy-select')`
 
+### 5. Security Baseline (mandatory before any release)
+- **`admin/access.xml` for every component**, listed via `<filename>access.xml</filename>` in the manifest's admin `<files>` block. Declare `core.admin`, `core.manage`, `core.options`, plus custom `<name>.view` and `<name>.write`.
+- **Permission gate at the top of every controller method** — admin AND API. Override `displayList`, `displayItem`, `add`, `edit`, and every custom action. A valid Joomla API token does NOT authorise any specific component on its own.
+- **CSRF on every state-changing action** — `$this->checkToken()` for POST forms, `$this->checkToken('get')` plus `Session::getFormToken()` in the URL for GET-form download/restore links.
+- **Path-traversal containment** — separator-anchored `str_starts_with($parent . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR)`. Never `strpos($parent, $root) !== 0` (bypassable on sibling-dir prefix collisions).
+- **PHP-extension write whitelist** — refuse `.php`/`.phtml`/`.phar`/`.pht` writes outside the specific subtree the extension owns.
+- **`opcache_invalidate()` after every PHP write** — otherwise stale cached bytes run on the next request.
+- **CRLF/header injection** — sanitize any user-derived value reflected into `Content-Disposition`/`Content-Type` via `preg_replace('/[^A-Za-z0-9._-]/', '-', …)`.
+- **No free-form `file_path` from request bodies** — accept an id, look the path up server-side from a database row.
+- **`htmlspecialchars()` on `Text::_()` in installer scripts** — `script.php`'s `postflight()` echoes into Joomla's installer frame.
+- **Run the `security-review` skill before tagging a release.** Bar: zero HIGH or MEDIUM findings.
+
+### 6. Web Services API endpoints (only relevant for components shipping `/api/...` routes)
+- **Auth header**: `X-Joomla-Token: <token>` + `Accept: application/vnd.api+json`. **`Authorization: Bearer …` returns 401** — that's not the auth header Joomla's token plugin reads.
+- **Routes don't exist without a `plg_webservices_*` plugin** registering them via `onBeforeApiRoute`. A component with `api/src/Controller/...` alone gets a silent 404. Joomla installs third-party plugins disabled by default — your package script can auto-enable.
+- **POST endpoints don't get `:id` from `$this->input`** — accept it as a method arg, fall back to `$this->input->getInt('id')`, fall back to a regex against `REQUEST_URI`.
+- Full reference: `JOOMLA5-WEB-SERVICES-API-GUIDE.md`.
+
+### 7. Template overrides — `#__template_overrides` schema
+- The `hash_id` column is **NOT a hash**. It's a base64-encoded relative path beginning with `/html/`. Decode with `base64_decode($hashId, true)`.
+- Override file lives at `<clientRoot>/templates/<template><decoded>`. `client_id`: 0=site (`JPATH_SITE`), 1=admin (`JPATH_ADMINISTRATOR`).
+- Core file is derived by stripping `/html/` and mapping the first segment: `layouts/…` → `<clientRoot>/layouts/…`; `com_X/<view>/<file>` → `<clientRoot>/components/com_X/tmpl/<view>/<file>`; `mod_X/<file>` → `<clientRoot>/modules/mod_X/tmpl/<file>`; `plg_<group>_<el>/<file>` → `JPATH_PLUGINS/<group>/<el>/tmpl/<file>` (always `JPATH_PLUGINS`, regardless of client_id).
+- Full reference: `JOOMLA5-TEMPLATE-OVERRIDES.md`.
+
+### 8. Manifest gotchas
+- **`HTMLHelper::_('script', $url, $options, $attribs)`** — `defer` is an HTML attribute, not a Joomla option. Putting it in `$options` (3rd arg) is silently dropped. Put it in `$attribs` (4th arg).
+- **Empty `sql/updates/mysql` folder** breaks install. Git doesn't track empty directories, so the folder drops out of the package zip. If the manifest's `<schemas>` block points at a non-existent path, install fails with `Joomla\Filesystem\Folder::files: Path is not a folder`. Either drop the `<schemas>` block when there are no update SQLs to ship, or add an `index.html` placeholder in the directory.
+- **Plugin manifest filename matches plugin element**, not `plg_group_X.xml`. So for plugin element `cstemplateintegrity`, the file is `cstemplateintegrity.xml`, not `plg_webservices_cstemplateintegrity.xml`.
+
 ---
 
 ## Joomla 5 Plugin Pattern

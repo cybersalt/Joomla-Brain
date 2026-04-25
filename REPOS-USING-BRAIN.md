@@ -26,6 +26,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-download-id-manager](https://github.com/cybersalt/cs-download-id-manager) | Component | CS Update Access Manager — membership-gated update access for pro extensions | Joomla 5 native (admin+site+API, custom fields, update server, email notifications, domain blocking) |
 | [cs-filter-by-meta](https://github.com/cybersalt/cs-filter-by-meta) | Component | Content meta audit tool | Joomla 5 |
 | [cs-talkback-to-joomla](https://github.com/cybersalt/cs-talkback-to-joomla) | Component | TalkBack to JComments migration tool | Joomla 5 native |
+| [cs-template-integrity](https://github.com/cybersalt/cs-template-integrity) | Package (com + plg_webservices) | Template-override integrity monitor — exposes `#__template_overrides` data via REST so Claude can review each flagged override; apply-fix and dismiss endpoints close the loop | Joomla 5/6 native (Web Services API, ApiController, JsonapiView, access.xml + ACL gate, GPL-2 — private repo) |
 | [CS-Chronoforms-Convert-to-Convert-Forms](https://github.com/cybersalt/CS-Chronoforms-Convert-to-Convert-Forms) | Component | CF6 to Convert Forms migration tool | Joomla 3 (legacy MVC) |
 
 ### Modules

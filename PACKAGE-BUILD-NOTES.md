@@ -77,6 +77,36 @@ For full manifest and file structure details, see:
 
 **Fix**: Use 7-Zip to create the ZIP.
 
+### "Joomla\\Filesystem\\Folder::files: Path is not a folder. Path: …/sql/updates/mysql"
+
+**Cause**: The component manifest declares an `<update>` block with a `<schemapath>` pointing at `sql/updates/mysql`, but that directory is empty in the source tree (or contains nothing the build script copied). **Git doesn't track empty directories**, and 7-Zip skips them too — so the directory drops out of the package zip, and Joomla refuses to install when it can't find the path the manifest claims exists.
+
+This bites when you delete the last update SQL from `sql/updates/mysql/` and forget to also remove the `<schemas>` block, or when you rename a component and the new tree never had any update SQLs to begin with.
+
+**Two fixes:**
+
+1. **If you have no update SQLs to ship in this release**, drop the entire `<update>` block from the manifest. You can re-add it in the next release that actually has a schema delta:
+
+    ```xml
+    <!-- REMOVE this block when sql/updates/mysql is empty: -->
+    <update>
+        <schemas>
+            <schemapath type="mysql">sql/updates/mysql</schemapath>
+        </schemas>
+    </update>
+    ```
+
+2. **If you want to keep the directory for future updates**, add an `index.html` placeholder so it survives in git and the zip:
+
+    ```html
+    <!-- sql/updates/mysql/index.html -->
+    <!DOCTYPE html><title></title>
+    ```
+
+    Joomla ignores non-`.sql` files in the schemas directory, so an `index.html` placeholder is safe.
+
+The error message points at the install location (`administrator/components/com_X/sql/updates/mysql`), which makes it look like an install bug — it's actually a packaging bug.
+
 ---
 
 ## File Encoding

@@ -159,12 +159,46 @@ If an article with Fileman attachments throws `UnexpectedValueException: Invalid
 
 Joomla Web Services API PATCH requests via PowerShell's `Invoke-RestMethod` return `status=200` but don't actually update the article. Likely a content-type or encoding quirk.
 
-**Workaround:** use `curl` with `-d @file.json` for large payloads. The required headers:
+**Workaround:** use `curl` with `-d @file.json` for large payloads. The required headers depend on which auth plugin is enabled:
 
 ```
 Content-Type: application/json
 Accept: application/vnd.api+json
-Authorization: Bearer <token>
+X-Joomla-Token: <token>      # Joomla's built-in token auth — preferred
 ```
 
+For the **Joomla API Token** auth (the default since 4.0), use `X-Joomla-Token: <token>` — `Authorization: Bearer <token>` returns `401 Forbidden`. For **HTTP Basic Auth** the form is `Authorization: Basic base64(user:pass)`. Full reference: `JOOMLA5-WEB-SERVICES-API-GUIDE.md`.
+
 And the Joomla article content field is called `introtext`, NOT `articletext` or `text` — the GET response shows a `text` field (introtext+fulltext concatenated), which misleads many API consumers. Use `introtext` for writes.
+
+---
+
+## 9. `HTMLHelper::_('script', ...)` silently drops `defer` from the `$options` array
+
+`HTMLHelper::_('script', $url, $options, $attribs)` has four arguments and an unforgiving distinction between options and attribs:
+
+- `$options` (3rd) — Joomla-internal flags only: `relative`, `version`, `pathOnly`, `detectBrowser`, `detectDebug`. **Anything else is silently dropped.**
+- `$attribs` (4th) — actual HTML attributes that land on the `<script>` tag.
+
+`defer` is an HTML attribute, not a Joomla option. Putting it in `$options` does nothing — no error, no warning, the script just loads without `defer`. Symptom: race conditions where a downstream script runs before the deferred one has parsed the file.
+
+```php
+// ❌ defer silently dropped — script loads without it
+HTMLHelper::_('script', 'com_x/x.js', [
+    'relative' => true,
+    'version'  => 'auto',
+    'defer'    => true,            // ← in $options, ignored
+]);
+
+// ✅ defer in $attribs — actually lands on the tag
+HTMLHelper::_(
+    'script',
+    'com_x/x.js',
+    ['relative' => true, 'version' => 'auto'],   // $options
+    ['defer' => true]                            // $attribs
+);
+```
+
+Web Asset Manager's `registerAndUseScript($name, $url, $options, $attribs)` has the same shape, so the rule applies there too.
+
+Belt and braces: if your script genuinely depends on a library (e.g. `window.hljs`), don't trust `defer` ordering across all browsers — also poll for the dependency in the consumer with a short timeout before giving up. Defer is a hint, not a guarantee.

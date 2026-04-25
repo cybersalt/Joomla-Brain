@@ -6,17 +6,19 @@ This repository contains best practices, scripts, and documentation for Joomla c
 
 ## ⚠️ SECURITY IS THE #1 PRIORITY
 
-**Every piece of code we write must be developed with security as the primary focus.** This is non-negotiable for all Cybersalt extensions, whether internal or public.
+**Every piece of code we write must be developed with security as the primary focus.** This is non-negotiable for all Cybersalt extensions, whether internal or public. **The bar is "passes a security review with zero HIGH or MEDIUM findings"** — run the `security-review` skill before tagging any release.
 
 Before writing any code, consider:
 - **SQL Injection**: Always use `$db->quote()`, `$db->quoteName()`, prepared statements. Never concatenate user input into queries.
-- **XSS**: Always escape output — `htmlspecialchars()` for HTML, `esc()` helper for JavaScript `innerHTML`, DOM APIs over string concatenation.
-- **CSRF**: Always check `Session::checkToken()` on form submissions and AJAX handlers.
-- **Access Control**: Always verify user permissions (`$user->authorise()`) before data modifications.
+- **XSS**: Always escape output — `htmlspecialchars()` for HTML, `esc()` helper for JavaScript `innerHTML`, DOM APIs over string concatenation. Includes `Text::_()` output in installer scripts (`script.php`'s `postflight()` echoes into Joomla's installer frame).
+- **CSRF**: Always check `Session::checkToken()` on form submissions and AJAX handlers — including GET-form download/restore links via `$this->checkToken('get')` plus `Session::getFormToken()` appended to the URL.
+- **Access Control**: Always verify user permissions (`$user->authorise()`) before data modifications. Components MUST ship `admin/access.xml` with custom `<name>.view` and `<name>.write` actions, and gate **every** controller method (admin AND API) with the matching check. **A valid Joomla API token does NOT authorise any specific component on its own.**
 - **Information Disclosure**: Never expose raw exception messages, SQL errors, or file paths to users. Log them and show generic messages.
 - **Input Validation**: Always validate ORDER BY columns against an explicit allowlist. Always validate and sanitize user input.
+- **File-write safety** (only relevant if your extension writes files under `JPATH_ROOT`): separator-anchored `str_starts_with` for containment (NOT `strpos`), PHP-extension whitelist for the specific subtree your extension owns, `opcache_invalidate()` after every write, never accept free-form `file_path` from request bodies — look the path up server-side from a database row instead.
+- **Response headers**: sanitize any user-derived value reflected into `Content-Disposition`/`Content-Type` via `preg_replace('/[^A-Za-z0-9._-]/', '-', …)`. `str_replace('"', '', …)` is not enough.
 
-See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions" for the full checklist.
+See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist, and `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions".
 
 ## Contents
 
@@ -28,7 +30,9 @@ See `COMPONENT-TROUBLESHOOTING.md` → "Security Checklist for Public Extensions
 - `JOOMLA5-UPDATE-SERVER-GUIDE.md`: Update server setup, authenticated downloads, `/extension.xml` behavior
 - `JOOMLA5-LIST-FILTERS-GUIDE.md`: Admin list views — js-stools filter bar, Choices.js on every select, sortable column headers, pagination, clickable count cards (match native Article Manager / User Manager)
 - `JOOMLA5-LANGUAGE-FILES-GOTCHAS.md`: Where Joomla actually loads language files from, INI encoding traps (em-dashes, smart quotes), plugin `.sys.ini` requirements, and why translations silently break
-- `JOOMLA5-UI-PATTERNS.md`: Cache-busting with filemtime, self-contained modal dialogs, dark mode CSS overrides, config page fieldset layouts, pre-flight dialog pattern for destructive operations, Joomlatools Files gotchas, Joomla API PATCH quirks
+- `JOOMLA5-UI-PATTERNS.md`: Cache-busting with filemtime, self-contained modal dialogs, dark mode CSS overrides, config page fieldset layouts, pre-flight dialog pattern for destructive operations, Joomlatools Files gotchas, Joomla API PATCH quirks, `HTMLHelper::script` silently dropping `defer` from `$options`
+- `JOOMLA5-WEB-SERVICES-API-GUIDE.md`: Building component endpoints — `X-Joomla-Token` (NOT `Authorization: Bearer`), the mandatory `plg_webservices_*` route registration, `:id` capture quirks on POST routes, ACL gate at every controller method, JsonapiView/ApiController wiring
+- `JOOMLA5-TEMPLATE-OVERRIDES.md`: `#__template_overrides` schema (`hash_id` is base64 of the relative path, NOT a hash), path resolution from `hash_id` first segment, write-side safety guards (separator-anchored containment check, PHP-extension whitelist, `opcache_invalidate`)
 - `JOOMLA5-EDGE-CASE-SCENARIOS.md`: Catalog of environmental / third-party conditions that break extensions and the patterns for detecting and handling them. Covers Akeeba Admin Tools `.htaccess` blocks, RewriteBase in subdirectory staging, Joomlatools Fileman container paths, Composer autoloader hash mismatches, non-standard log directories, CDN caching. Living reference — add new scenarios here as they're encountered.
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
