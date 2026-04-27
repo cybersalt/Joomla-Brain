@@ -451,6 +451,45 @@ if (method_exists($router, 'getMode')) {
 }
 ```
 
+### `modal_article` (and friends) renders with no Select button in plugin settings
+**Symptom**: A `<field type="modal_article" select="true" clear="true" />` placed in a plugin manifest's `<config><fields name="params">…</fields></config>` block renders just the input — no Select button, no Clear button, no way to actually pick anything. The user sees a label, a description, and a useless empty input.
+
+**Cause**: The `modal_article` field family relies on a layout + JS bundle that Joomla loads in module/component admin contexts (e.g., `com_modules` for module params, the article edit form for related-article picking) but **does not load in the plugin manager (`com_plugins`)** on Joomla 5/6. The field class still emits the `<input>` because that's done in PHP, but the modal trigger button + browse modal never wire up.
+
+This was confirmed on Joomla 6.1 with cs-registration-redirect v1.1.2 — even after dropping `showon` (which is its own separate gotcha — see below), the picker still rendered empty.
+
+**Fix**: Use `type="sql"` instead. The `sql` field works in any context and renders a dropdown bound to a database query:
+
+```xml
+<field
+    name="redirect_article"
+    type="sql"
+    label="PLG_..._ARTICLE_LABEL"
+    description="PLG_..._ARTICLE_DESC"
+    default="0"
+    query="SELECT a.id, CONCAT(IFNULL(c.title, '–'), ' / ', a.title) AS title
+           FROM #__content AS a
+           LEFT JOIN #__categories AS c ON c.id = a.catid
+           WHERE a.state = 1
+           ORDER BY c.title, a.title"
+    key_field="id"
+    value_field="title"
+>
+    <option value="0">- Select an article -</option>
+</field>
+```
+
+For sites with thousands of articles this gives a long dropdown but it works reliably. If volume is a concern, scope with `LIMIT 500` plus an order on `created DESC` or filter by `featured = 1`.
+
+The same workaround applies to `modal_contact`, `modal_menu`, `modal_user`, etc. when used in plugin settings — replace with a `sql` query against the corresponding core table.
+
+### Modal-trigger field hidden by `showon` — Select button never wires up
+**Cause**: Even in contexts where `modal_*` fields *do* work (modules, articles), wrapping one in `showon` hides it at page load with `display:none`. The trigger JS runs once at page load against the visible DOM and never re-binds when the field is revealed. The field becomes visible but the Select button does nothing.
+
+**Fix**: Drop `showon` from modal-trigger fields. Render them always; prefix each conditional field's description with *"Used when destination type is X"* so the user knows which one applies.
+
+See `JOOMLA5-UI-PATTERNS.md` § "Modal-trigger fields and `showon` don't mix" for the fuller writeup, and § "Article picker via `sql` field" for the plugin-settings workaround.
+
 ---
 
 ## AJAX Handlers with com_ajax (CRITICAL for SubscriberInterface)

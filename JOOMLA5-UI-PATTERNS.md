@@ -202,3 +202,138 @@ HTMLHelper::_(
 Web Asset Manager's `registerAndUseScript($name, $url, $options, $attribs)` has the same shape, so the rule applies there too.
 
 Belt and braces: if your script genuinely depends on a library (e.g. `window.hljs`), don't trust `defer` ordering across all browsers — also poll for the dependency in the consumer with a short timeout before giving up. Defer is a hint, not a guarantee.
+
+---
+
+## 10. Modal-trigger fields (`modal_article`, `modal_contact`, etc.) and `showon` don't mix
+
+The `modal_*` family of core fields — `modal_article`, `modal_contact`, `modal_menu`, `modal_user`, etc. — render an input plus a **Select** button that opens a Joomla modal browser. The button-to-modal wiring is done by JavaScript that runs **once at page load** against the rendered DOM.
+
+`showon="some_field:value"` hides a field at page load with `display:none`. The HTML is in the DOM, but the field is invisible. For plain inputs (`text`, `list`, `radio`, `textarea`) this is fine — the browser shows the field instantly when `showon` flips it visible, and there's no JS init to break.
+
+For modal-trigger fields, it's broken: the trigger JS runs against the hidden field at page load and never re-binds when `showon` reveals it. The field becomes visible but the Select button does nothing — visually it looks like an empty input area with no usable picker. The user thinks the field is broken (they're not entirely wrong).
+
+### Symptom
+
+> *"When I switch the dropdown to Article, the description says 'Pick a published article' but there's nothing to pick — no input, no button, nothing."*
+
+### Don't do this
+
+```xml
+<field
+    name="redirect_type"
+    type="list"
+    default="url"
+>
+    <option value="url">URL</option>
+    <option value="article">Article</option>
+</field>
+
+<field
+    name="redirect_url"
+    type="text"
+    showon="redirect_type:url"
+/>
+
+<!-- ❌ Select button never wires up — picker looks empty -->
+<field
+    name="redirect_article"
+    type="modal_article"
+    select="true"
+    clear="true"
+    showon="redirect_type:article"
+/>
+```
+
+### Do this
+
+Drop `showon` from the modal-trigger field. Render all the conditional fields together in a visually-grouped block (use `<field type="spacer" hr="true" />` to separate the block) and start each description with *"Used when X is …"*. Only the field matching the user's choice is read at runtime.
+
+```xml
+<field
+    name="redirect_type"
+    type="list"
+    default="url"
+>
+    <option value="url">URL</option>
+    <option value="article">Article</option>
+</field>
+
+<field name="spacer_dest" type="spacer" hr="true" />
+
+<field
+    name="redirect_url"
+    type="text"
+    description="Used when destination type is &quot;URL&quot;..."
+/>
+
+<!-- ✅ Always-rendered, Select button works -->
+<field
+    name="redirect_article"
+    type="modal_article"
+    select="true"
+    clear="true"
+    description="Used when destination type is &quot;Article&quot;. Click the Select button to open the article browser..."
+/>
+
+<field name="spacer_msg" type="spacer" hr="true" />
+```
+
+### Why this is the right tradeoff
+
+The alternative — keeping `showon` and re-initializing the modal trigger after `display` changes — would require shipping JavaScript that listens for showon visibility events and re-runs the modal-trigger init. Joomla doesn't expose a stable API for that, so it's both fragile and a maintenance burden. The cost of "one extra always-visible field" is small; the cost of "the field looks broken" is large.
+
+If you have many modal-trigger fields driven by one selector and the always-visible form gets unwieldy, a fieldset-per-choice with a `subform` or a tab layout is a better escape hatch than per-field `showon`.
+
+### Real bug this caught
+
+cs-registration-redirect v1.1.1 shipped with `showon="redirect_type:article"` on a `modal_article` field. The picker rendered with no Select button. Fixed in v1.1.2 by dropping `showon` from all three destination fields — *but the modal_article picker was still broken because of the next gotcha.*
+
+---
+
+## 11. Article picker in plugin settings: use `type="sql"`, NOT `type="modal_article"`
+
+The `modal_article` field family — `modal_article`, `modal_contact`, `modal_menu`, `modal_user`, etc. — works in module configuration (rendered by `com_modules`) and in article edit forms (rendered by `com_content`), but **silently fails to render its Select button in plugin settings (`com_plugins`)** on Joomla 5/6. The PHP side emits the `<input>`, but the modal-trigger button + browse modal never wire up because `com_plugins` doesn't load the layout/JS bundle these fields depend on.
+
+You see a label, a description, and a useless empty input. No error, no warning. cs-registration-redirect v1.1.2 hit this on Joomla 6.1.
+
+### The reliable workaround: `type="sql"`
+
+The `sql` field is context-agnostic — it just renders a `<select>` populated by a database query:
+
+```xml
+<field
+    name="redirect_article"
+    type="sql"
+    label="PLG_..._ARTICLE_LABEL"
+    description="PLG_..._ARTICLE_DESC"
+    default="0"
+    query="SELECT a.id, CONCAT(IFNULL(c.title, '–'), ' / ', a.title) AS title
+           FROM #__content AS a
+           LEFT JOIN #__categories AS c ON c.id = a.catid
+           WHERE a.state = 1
+           ORDER BY c.title, a.title"
+    key_field="id"
+    value_field="title"
+>
+    <option value="0">- Select an article -</option>
+</field>
+```
+
+The `IFNULL(c.title, '–')` guards against articles in deleted categories. Prefixing with category title makes the dropdown navigable even with hundreds of articles. For sites with thousands, scope further:
+
+- `LIMIT 500` plus `ORDER BY a.created DESC` — recent articles only
+- `WHERE a.featured = 1` — featured articles only
+- A separate text-input field where the admin can paste an arbitrary article ID, used as a fallback when the dropdown doesn't include the target
+
+### The same trick for menu items, contacts, users
+
+If `modal_menu`, `modal_contact`, `modal_user` ever fail the same way in plugin settings, swap to `sql` with a query against the corresponding core table:
+
+| Modal field | Replacement query |
+|---|---|
+| `modal_menu` | `SELECT id, title FROM #__menu WHERE published = 1 AND client_id = 0 ORDER BY title` |
+| `modal_contact` | `SELECT id, name FROM #__contact_details WHERE published = 1 ORDER BY name` |
+| `modal_user` | `SELECT id, name FROM #__users WHERE block = 0 ORDER BY name` |
+
+Note: `type="menuitem"` is a separate field type from `modal_menu` and DOES work in plugin settings — use that for menu item selection. The table above is for the modal variants.
