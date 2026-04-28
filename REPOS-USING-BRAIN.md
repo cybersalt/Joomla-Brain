@@ -13,6 +13,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-userback-admin](https://github.com/cybersalt/cs-userback-admin) | System Plugin | Userback integration with frontend/backend detection | Joomla 5 native |
 | [cs-siteground-cache-for-joomla](https://github.com/cybersalt/cs-siteground-cache-for-joomla) | System Plugin | SiteGround cache integration, auto-purge, admin toolbar button, log viewer | Joomla 5 native (SubscriberInterface, com_ajax, custom fields, header injection) |
 | [cs-registration-redirect](https://github.com/cybersalt/cs-registration-redirect) (private) | System Plugin | Redirects users to a configurable URL after com_users registration completes — closes the gap that the per-menu-item-only stock redirect leaves | Joomla 4/5/6 native (SubscriberInterface, onAfterRoute, full update server) |
+| [cs-hikashop-login-redirect](https://github.com/cybersalt/cs-hikashop-login-redirect) (private) | System Plugin | Catches HikaShop's "404-instead-of-access-denied" response and redirects Guests to login with a `return=` parameter so they bounce back to the product after authenticating | Joomla 4/5/6 native (SubscriberInterface, **onError** hook, full update server) |
 
 ### Packages
 | Repo | Type | Description | Status |
@@ -56,6 +57,7 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-image-map-hotlinking | ❌ | ❌ | ❌ | ❌ | ✅ |
 | cs-siteground-cache-for-joomla | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-registration-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cs-hikashop-login-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 

@@ -677,10 +677,110 @@ In manifest use `layout="joomla.form.field.list-fancy-select"` with `multiple="t
 
 ---
 
+## Catching component-thrown 404s — use `onError`, not `onAfterDispatch`/`onAfterRender`
+
+**Symptom:** A system plugin needs to detect when a third-party component (HikaShop, VirtueMart, etc.) responds with a 404 because of access denial / missing record / etc., and react to it (redirect, log, enqueue notice). The natural reach is `onAfterDispatch` or `onAfterRender` — but neither fires.
+
+**Cause:** When a component raises an exception mid-dispatch (which is how HikaShop signals access denial — see `components/com_hikashop/controllers/product.php` and friends), Joomla's dispatch loop never completes. The lifecycle on this path is:
+
+```
+onAfterRoute  →  onError  →  (error renderer takes over)  →  onAfterRespond
+```
+
+- `onAfterDispatch` does NOT fire — dispatch threw before completing.
+- `onAfterRender` does NOT fire — the regular renderer never runs; the *error* renderer is a separate code path that doesn't fire `onAfterRender`.
+- `onAfterRespond` fires too late — the response has already been committed; you cannot redirect from there.
+
+The only event that fires *after* the 404 has been raised *and before* the response is committed is **`onError`**.
+
+**Verified empirically** on Joomla 6.1 + HikaShop 6.4 with an instrumented plugin that logged every event firing on the 404 path. Log excerpt (Guest hits a restricted product):
+
+```
+[18:35:55] onAfterRoute    uri=/en/store/product/foo opt=com_hikashop view=category guest=1 docType=NO-DOC isErr=0 hdrStatus=
+[18:35:55] onError         uri=/en/store/product/foo opt=com_hikashop view=product  guest=1 docType=html  isErr=0 hdrStatus=
+[18:35:55] onAfterRespond  uri=/en/store/product/foo opt=com_hikashop view=product  guest=1 docType=error isErr=1 hdrStatus=404
+```
+
+**How to handle it:** Subscribe to `onError` and read the throwable from the event:
+
+```php
+use Joomla\CMS\Event\ErrorEvent;
+use Joomla\Event\SubscriberInterface;
+
+public static function getSubscribedEvents(): array
+{
+    return ['onError' => 'onError'];
+}
+
+public function onError(ErrorEvent $event): void
+{
+    $error = $event->getError();
+    if ((int) $error->getCode() !== 404) {
+        return;
+    }
+
+    $app = $this->getApplication();
+    $input = $app->getInput();
+
+    // At this point $input still reflects the original request — check the
+    // option/view to decide whether this is "your" 404.
+    if ($input->get('option') !== 'com_hikashop') {
+        return;
+    }
+
+    // ... build redirect, etc.
+    $app->redirect($yourUrl);
+}
+```
+
+The event's input still reflects the original route (`option=com_hikashop`, `view=product`, etc.), and the response has not been committed yet — `$app->redirect(...)` works.
+
+**Don't bother detecting the 404 by header/document inspection.** A spec earlier suggested checking `$app->getDocument() instanceof ErrorDocument` or sniffing the `Status: 404` header from `onAfterDispatch` / `onAfterRender`. That approach is dead — the detection is fine but neither hook fires on the path you care about. Use `onError` and read `$event->getError()->getCode()` directly.
+
+**Reference:** cs-hikashop-login-redirect v1.0.0 — the original spec called for `onAfterDispatch` + `onAfterRender`; field testing on Philippe's site (dominicanamberfossils.com, J6.1.0 + HikaShop 6.4.0) proved this didn't work and the plugin was rewritten around `onError`.
+
+---
+
+## `return=` URLs must be absolute for `Uri::isInternal()` to accept them
+
+**Symptom:** Plugin builds a base64-encoded `return=` query parameter for a redirect to Joomla's login form (the standard pattern for "log in then come back here"). The user logs in successfully but lands on the wrong page — a menu-defined default, the homepage, or the user's last-state — instead of the URL the plugin encoded.
+
+**Cause:** `Joomla\Component\Users\Site\Model\LoginModel::loadFormData()` decodes the URL `return=` parameter (base64), then validates it via:
+
+```php
+if (!Uri::isInternal($return)) {
+    $return = '';
+}
+```
+
+`Uri::isInternal()` performs `stripos($url, Uri::base())` against the full site URL (`https://example.com/`). A path-only URL like `/en/store/product/foo` doesn't match at position 0 (the host is missing), so `isInternal` returns `FALSE` — and `$return` gets silently reset to empty. The form then falls back to user-state defaults.
+
+**`Uri::isInternal('/en/store/product/foo')`** → `FALSE`
+**`Uri::isInternal('https://example.com/en/store/product/foo')`** → `TRUE`
+
+**Fix:** Encode the full URL, not just `path+query`:
+
+```php
+// ❌ Wrong — stripped by Uri::isInternal
+$return = base64_encode(Uri::getInstance()->toString(['path', 'query']));
+
+// ✅ Right — full URL passes Uri::isInternal
+$return = base64_encode(Uri::getInstance()->toString(['scheme', 'host', 'port', 'path', 'query']));
+
+$loginUrl = $loginBase . (str_contains($loginBase, '?') ? '&' : '?') . 'return=' . $return;
+```
+
+**Bonus gotcha — site-config can still override `return=`:** Even with the absolute URL fix in place, post-login the user can still bounce somewhere unexpected if the **login menu item's "Login Redirect Page"** parameter is set. Joomla menu items have `loginredirectchoice` + `login_redirect_menuitem` params; when `loginredirectchoice = 1`, the menu item's value overrides the form's `return` field entirely. This is a site-config issue, not a plugin bug — point users at: Menus → edit the login menu item → "Login Redirect Page" → "Use Returned URL" / "No".
+
+**Reference:** cs-hikashop-login-redirect v1.0.0 — encoded `path+query` originally, redirect worked but post-login bounced to a menu default; switched to full URL and the form's hidden `return` rendered correctly.
+
+---
+
 ## Example Repositories
 
 - [cs-browser-page-title](https://github.com/cybersalt/cs-browser-page-title) - System plugin that sets browser page title from custom field value
 - [cs-siteground-cache-for-joomla](https://github.com/cybersalt/cs-siteground-cache-for-joomla) - System plugin with admin header button injection, inline log viewer, custom field types, UNIX socket IPC, shutdown function fallback
+- [cs-hikashop-login-redirect](https://github.com/cybersalt/cs-hikashop-login-redirect) - System plugin (private repo) hooking `onError` to redirect Guests on HikaShop access-denied 404s; canonical example of catching a component-thrown 404 from a system plugin
 
 ---
 
