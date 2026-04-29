@@ -776,6 +776,220 @@ $loginUrl = $loginBase . (str_contains($loginBase, '?') ? '&' : '?') . 'return='
 
 ---
 
+## Common Plugin Groups
+
+Joomla ships dozens of plugin groups; these are the ones you'll actually build against. Knowing which group fires which events is the difference between five minutes of work and an afternoon spelunking through `libraries/src/`.
+
+| Group | Purpose | Common events |
+|-------|---------|--------------|
+| **content** | Modify/process article and content rendering | `onContentPrepare`, `onContentAfterTitle`, `onContentBeforeDisplay`, `onContentAfterDisplay`, `onContentAfterSave`, `onContentBeforeDelete` |
+| **system** | Site-wide hooks across the request lifecycle | `onAfterInitialise`, `onAfterRoute`, `onAfterDispatch`, `onBeforeRender`, `onAfterRender`, `onBeforeCompileHead`, `onError` |
+| **finder** | Smart Search indexing | `onFinderAfterSave`, `onFinderAfterDelete`, `onFinderChangeState`, `onFinderCategoryChangeState` |
+| **task** | Scheduled tasks (Joomla's cron-like Scheduler) | `onTaskOptionsList`, `onExecuteTask` |
+| **webservices** | Register API routes for the JSON:API web services | `onBeforeApiRoute` |
+| **schemaorg** | Structured data injection | `onSchemaPrepare`, `onSchemaBeforeCompileHead` |
+| **user** | User lifecycle hooks | `onUserAfterSave`, `onUserAfterDelete`, `onUserLogin`, `onUserLogout`, `onUserAuthenticate` |
+| **authentication** | Auth providers (LDAP, GitHub, etc.) | `onUserAuthenticate` |
+| **installer** | Extension install/update events | `onInstallerBeforeInstallation`, `onInstallerAfterInstaller` |
+| **editors** | WYSIWYG editor implementations | `onInit`, `onSave`, `onGetContent`, `onSetContent` |
+| **editors-xtd** | Editor toolbar buttons | `onDisplay` |
+| **quickicon** | Admin control-panel quick icons | `onGetIcons` |
+| **fields** | Custom field types | `onCustomFieldsGetTypes`, `onCustomFieldsPrepareDom` |
+| **privacy** | GDPR export/anonymise hooks | `onPrivacyExportRequest`, `onPrivacyRemoveData` |
+
+**Picking a group:** the group determines *when* and *where* the plugin fires. A "modify article HTML before render" plugin is **content**, not system. A "log every page load" plugin is **system**, not content. Don't fight the group — if you find yourself reaching for events from a different group, it usually means you picked wrong.
+
+---
+
+## Task Plugin (Joomla Scheduler)
+
+Task plugins register routines that the Joomla Scheduler can run on a schedule (or on-demand). The pattern uses `TaskPluginTrait` for boilerplate and a `TASKS_MAP` constant to declare what routines this plugin advertises.
+
+```php
+<?php
+
+namespace Cybersalt\Plugin\Task\MyTask\Extension;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\Component\Scheduler\Administrator\Event\ExecuteTaskEvent;
+use Joomla\Component\Scheduler\Administrator\Task\Status as TaskStatus;
+use Joomla\Component\Scheduler\Administrator\Traits\TaskPluginTrait;
+use Joomla\Event\SubscriberInterface;
+
+final class MyTask extends CMSPlugin implements SubscriberInterface
+{
+    use TaskPluginTrait;
+
+    /**
+     * Task routines this plugin advertises.
+     *
+     * The key is the routine ID (used internally by the Scheduler);
+     * the array describes what the user sees in the admin and which
+     * method runs.
+     */
+    protected const TASKS_MAP = [
+        'mytask.cleanup' => [
+            'langConstPrefix' => 'PLG_TASK_MYTASK_CLEANUP',
+            'method'          => 'doCleanup',
+            'form'            => 'cleanup_params', // optional: form XML for per-task params
+        ],
+        'mytask.report' => [
+            'langConstPrefix' => 'PLG_TASK_MYTASK_REPORT',
+            'method'          => 'doReport',
+        ],
+    ];
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            'onTaskOptionsList' => 'advertiseRoutines',     // from TaskPluginTrait
+            'onExecuteTask'     => 'standardRoutineHandler', // from TaskPluginTrait
+        ];
+    }
+
+    private function doCleanup(ExecuteTaskEvent $event): int
+    {
+        // Your cleanup work here. Throw on hard failure, return a status otherwise.
+        // Use $this->logTask('Removed N expired records') from TaskPluginTrait
+        // to write to the task's log channel.
+
+        return TaskStatus::OK;
+    }
+
+    private function doReport(ExecuteTaskEvent $event): int
+    {
+        // ...
+        return TaskStatus::OK;
+    }
+}
+```
+
+**Language keys:** `TaskPluginTrait` builds two keys per routine from `langConstPrefix`:
+
+- `{langConstPrefix}_TITLE` — shown as the task type in the admin dropdown.
+- `{langConstPrefix}_DESC` — shown as the description below the dropdown.
+
+So your `.ini` must include:
+
+```ini
+PLG_TASK_MYTASK_CLEANUP_TITLE="Database cleanup"
+PLG_TASK_MYTASK_CLEANUP_DESC="Removes expired records from the database."
+PLG_TASK_MYTASK_REPORT_TITLE="Generate weekly report"
+PLG_TASK_MYTASK_REPORT_DESC="Compiles a CSV report of the past week's activity."
+```
+
+**Status values** (from `Joomla\Component\Scheduler\Administrator\Task\Status`):
+
+| Constant | When to return |
+|---|---|
+| `TaskStatus::OK` | Task succeeded. |
+| `TaskStatus::KNOCKOUT` | Task should be removed/disabled (rare). |
+| `TaskStatus::TIMEOUT` | Soft timeout — task ran too long; let the Scheduler retry. |
+| `TaskStatus::WILL_RESUME` | Task is paused mid-work and will continue on next run. |
+| Throw an exception | Hard failure — Scheduler logs it as failed. |
+
+> [!TIP]
+> The Scheduler runs tasks via Joomla's Web Cron, a CLI runner, or the admin "Run on demand" button. Test your task with the on-demand button first — it gives you immediate feedback without waiting for the next cron tick.
+
+---
+
+## Webservices Plugin (JSON:API routes)
+
+Webservices plugins extend Joomla's web services API by registering CRUD routes for a component. They're the cleanest way to expose a custom component over the JSON:API.
+
+```php
+<?php
+
+namespace Cybersalt\Plugin\Webservices\MyApi\Extension;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\CMS\Router\ApiRouter;
+use Joomla\Event\SubscriberInterface;
+
+final class MyApi extends CMSPlugin implements SubscriberInterface
+{
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            'onBeforeApiRoute' => 'onBeforeApiRoute',
+        ];
+    }
+
+    public function onBeforeApiRoute(&$router): void
+    {
+        /** @var ApiRouter $router */
+        $router->createCRUDRoutes(
+            'v1/example/items',          // URL prefix under /api/index.php/
+            'items',                      // controller name in com_example
+            ['component' => 'com_example']
+        );
+
+        // Custom non-CRUD endpoints:
+        $router->createCRUDRoutes(
+            'v1/example/items/:id/publish',
+            'items',
+            ['component' => 'com_example', 'task' => 'publish']
+        );
+    }
+}
+```
+
+The matching API controller lives in your component:
+
+```
+components/com_example/src/Controller/ItemsController.php
+```
+
+Both **must exist** for the route to do anything — the plugin only registers the URL pattern; the component's `Api/Controller/` and `Api/View/` classes do the actual work.
+
+See [[JOOMLA5-WEB-SERVICES-API-GUIDE.md]] for the full pipeline (manifest, controller, model, view, JSON:API document).
+
+---
+
+## Finder Plugin (Smart Search indexing)
+
+If your component stores searchable content, a Finder plugin teaches Joomla's Smart Search how to index it. Finder plugins extend `Joomla\Component\Finder\Administrator\Indexer\Adapter` (not `CMSPlugin` directly).
+
+```php
+<?php
+
+namespace Cybersalt\Plugin\Finder\MyContent\Extension;
+
+\defined('_JEXEC') or die;
+
+use Joomla\Component\Finder\Administrator\Indexer\Adapter;
+use Joomla\Event\SubscriberInterface;
+
+final class MyContent extends Adapter implements SubscriberInterface
+{
+    protected $context   = 'MyContent';
+    protected $extension = 'com_mycomponent';
+    protected $layout    = 'item';
+    protected $type_title = 'My Content Item';
+    protected $table     = '#__mycomponent_items';
+
+    public static function getSubscribedEvents(): array
+    {
+        return [
+            'onFinderAfterSave'           => 'onFinderAfterSave',
+            'onFinderAfterDelete'         => 'onFinderAfterDelete',
+            'onFinderChangeState'         => 'onFinderChangeState',
+            'onFinderCategoryChangeState' => 'onFinderCategoryChangeState',
+        ];
+    }
+
+    // Implement index($item, $format) and other Adapter abstract methods...
+}
+```
+
+**When to bother:** if Smart Search is enabled on the site and clients expect "search the whole site" to find content from your component. If they just use the component's own list filter, skip the Finder plugin.
+
+---
+
 ## Example Repositories
 
 - [cs-browser-page-title](https://github.com/cybersalt/cs-browser-page-title) - System plugin that sets browser page title from custom field value
