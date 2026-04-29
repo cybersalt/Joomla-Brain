@@ -25,7 +25,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ## v1.1.0 — 2026-04-29
 
-Significant expansion of Joomla 5/6 component architecture coverage, testing patterns, web asset management, and editor API. Most of this batch is contributed material from Brent Cordis (see `CONTRIBUTORS.md`), folded into Cybersalt's voice and aligned with the existing security-first framing.
+Significant expansion of Joomla 5/6 component architecture coverage, testing patterns, web asset management, and editor API. Most of this batch is contributed material from [Brent Cordis](https://github.com/bcordis), sourced from [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0) (GPL-2.0-or-later, license-compatible with the Brain). See `CONTRIBUTORS.md` for the full attribution. Folded into Cybersalt's voice and aligned with the existing security-first framing.
 
 ### 🚀 New
 

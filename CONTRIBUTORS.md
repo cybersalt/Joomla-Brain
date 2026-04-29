@@ -14,9 +14,11 @@ If you've contributed material that ended up in this repo (a guide, a gotcha, a 
 
 ## Contributors
 
-### Brent Cordis
+### Brent Cordis ([@bcordis](https://github.com/bcordis))
 
-Brent contributed a substantial body of Joomla 5/6 component architecture, testing, web asset management, editor API, and gotcha-catalog material distilled from his own production work. His contribution shaped or wholly originated:
+**Source:** [Joomla-Bible-Study/claude-skill-joomla](https://github.com/Joomla-Bible-Study/claude-skill-joomla) — published as a Claude Code skill / Claude.ai skill by [Christian Web Ministries](https://christianwebministries.org). Licensed under [GPL-2.0-or-later](https://github.com/Joomla-Bible-Study/claude-skill-joomla/blob/main/LICENSE), compatible with the Joomla ecosystem and our existing Cybersalt extensions.
+
+Brent contributed a substantial body of Joomla 5/6 component architecture, testing, web asset management, editor API, and gotcha-catalog material distilled from his own production work on [Proclaim](https://github.com/Joomla-Bible-Study/Proclaim), [CWMScriptureLinks](https://github.com/bcordis/CWMScriptureLinks), and other CWM extensions. His contribution shaped or wholly originated:
 
 - `JOOMLA-CODING-STANDARDS.md` — PHPDoc/DocBlock alignment rules, ESLint configuration, PHP_CodeSniffer setup, inline comment guidance.
 - `JOOMLA5-TESTING-GUIDE.md` — PHPUnit + real Joomla CMS classes pattern (no stubs), `getQueryStub()` helper, model/table/helper test patterns, JavaScript testing with Jest.
@@ -27,7 +29,14 @@ Brent contributed a substantial body of Joomla 5/6 component architecture, testi
 - Toolbar API modern pattern (added to `JOOMLA6-CHECKLIST.md` / `JOOMLA-CODING-STANDARDS.md`).
 - SEF router callback naming convention + hidden menu items pattern (added to `JOOMLA5-COMPONENT-ROUTING.md`).
 
-Contribution intake: 2026-04-29. See `CHANGELOG.md` v1.1.0 for the specific commits.
+Contribution intake: 2026-04-29 (against [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0)). See `CHANGELOG.md` v1.1.0 for the specific commits.
+
+When pulling future updates from Brent's repo, the expected pattern is:
+
+1. Diff the upstream `skills/joomla/SKILL.md` and `skills/joomla/references/*.md` against the last-imported revision.
+2. Cherry-pick new or substantially changed material into the matching Brain guide (or a new one), keeping Cybersalt's voice.
+3. Cite the upstream commit / tag in the import commit message: `(source: Joomla-Bible-Study/claude-skill-joomla@<sha>)`.
+4. Bump `CHANGELOG.md` and add a one-liner here noting the new intake date and upstream revision.
 
 ---
 
@@ -35,9 +44,14 @@ Contribution intake: 2026-04-29. See `CHANGELOG.md` v1.1.0 for the specific comm
 
 When you send Tim something — a guide, a fix, a new gotcha — and it ends up shipping in the Brain:
 
-1. The commit message names the contributor (e.g. *"Add EDITOR-API-GUIDE.md (contrib: Brent Cordis)"*).
-2. The relevant `CHANGELOG.md` entry credits the contributor in the same line.
-3. This file gets a section like the one above listing the specific files / sections that originated with that contributor.
+1. The commit message names the contributor and links any source repo (e.g. *"Add EDITOR-API-GUIDE.md (source: Joomla-Bible-Study/claude-skill-joomla, contrib: Brent Cordis)"*).
+2. The relevant `CHANGELOG.md` entry credits the contributor in the same line, with a clickable link to the source repo when there is one.
+3. This file gets a section like the one above with:
+   - A `[Display Name](github-profile-url)` link as the section heading.
+   - A **Source** line citing the upstream repo with a clickable link, plus the upstream license (so future maintainers can verify license compatibility before pulling further updates).
+   - A list of which Brain files / sections originated with that contributor.
 4. The guide itself stays in Cybersalt's voice (security-first framing, the same heading conventions, etc.) — the goal is consistency across the Brain, not preserving every contributor's prose verbatim. Credit goes here, in the changelog, and in commit history. Inside the guide, attribution lines like *"Originally contributed by X"* are avoided unless the contributor specifically wants their byline in the file.
+
+**License compatibility check before importing:** Joomla-Brain is GPL-compatible. Material from GPL-2.0, GPL-2.0-or-later, or LGPL repos can be folded in. Material under MIT, BSD, or Apache-2.0 can also be re-licensed forward into GPL. **Do not pull from CC-BY-NC, proprietary, or "all rights reserved" sources** without an explicit written grant from the author.
 
 If you'd prefer your contribution to *not* be publicly credited, say so when you send it — Cybersalt will note "(anonymous contributor)" in the changelog instead.
