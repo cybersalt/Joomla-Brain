@@ -227,6 +227,137 @@ $url = Route::_('index.php?option=com_example&view=articles&topic_id=' . $id . '
 
 ---
 
+## SEF Router Callback Naming (RouterView)
+
+When using `RouterView` with view-based callbacks, the method names follow a **strict** convention derived from the view name. Get it wrong and Joomla silently skips your callback — producing broken URLs that fall back to numeric IDs or `/component/com_yourext/...`.
+
+### The naming rule
+
+```
+get + ucfirst(viewName) + 'Segment'   → build (ID → alias)
+get + ucfirst(viewName) + 'Id'        → parse (alias → ID)
+```
+
+Case must match **exactly**. Joomla looks up the method by literal string match.
+
+```php
+// View 'item' → these exact method names:
+public function getItemSegment($id, $query): array        // Build: ID → alias
+public function getItemId($segment, $query): int|false    // Parse: alias → ID
+
+// View 'category' → these exact method names:
+public function getCategorySegment($id, $query): array
+public function getCategoryId($segment, $query): int|false
+```
+
+### What `getXxxSegment()` must return
+
+An **associative array** mapping ID → alias:
+
+```php
+public function getItemSegment($id, $query): array
+{
+    $alias = $this->lookupAlias((int) $id);
+    return [(int) $id => $alias ?: (string) $id];
+}
+```
+
+Returning a flat array (`return [$alias];`) produces the wrong slug — Joomla expects the keyed form so it can round-trip the ID.
+
+### What `getXxxId()` must return
+
+An integer ID, or `false` when the alias can't be resolved:
+
+```php
+public function getItemId($segment, $query): int|false
+{
+    $id = $this->lookupId($segment);
+    return $id ?: false;
+}
+```
+
+If your aliases can collide across categories (two items both aliased `intro` under different parents), `getXxxId()` **must** scope the lookup using `$query` — typically by `category_id` or `parent_id` already in the query — or you'll resolve to the wrong record.
+
+### Rule order matters
+
+`RouterView` runs three rule classes in sequence. Register them in this order:
+
+```php
+$this->attachRule(new MenuRules($this));      // 1. Match against menu items first
+$this->attachRule(new StandardRules($this));  // 2. Then per-view callbacks
+$this->attachRule(new NomenuRules($this));    // 3. Fall back to ?option=… form
+```
+
+Wrong order = unexpected slugs or unresolved URLs.
+
+### Common mistakes
+
+| Mistake | Symptom | Fix |
+|---|---|---|
+| Method name case wrong (`getitemSegment`) | Callback silently skipped, URLs use numeric IDs | Match `get` + `ucfirst(view)` + `Segment`/`Id` exactly |
+| `getXxxSegment()` returns flat array | Slug is wrong or duplicated | Return `[id => alias]` associative form |
+| `getXxxId()` doesn't scope by parent | Ambiguous aliases resolve to wrong record | Filter the lookup query by `$query['category_id']` etc. |
+| Rule order: `Standard` before `Menu` | Menu-item URLs don't match their menu paths | Order as `MenuRules` → `StandardRules` → `NomenuRules` |
+
+---
+
+## Hidden Menu Items for SEF Routing
+
+`Route::_()` resolves URLs by walking the site menu via `SiteMenu::getItems()` — and **that method filters by the current user's access levels**. For components that gate views behind login, this creates a non-obvious trap:
+
+> **If your routing menu items are `access=2` (Registered), guests can't resolve SEF URLs**, so `Route::_()` falls through to the non-SEF `?option=…&view=…` form on the wrong base path. The component's controller still enforces login — Public access on the *menu item* only affects URL resolution, not page access.
+
+### The pattern
+
+Create a **hidden menu type** during component install. The menu type isn't assigned to any module (so visitors never see it), but it gives `Route::_()` a published menu item per view to anchor against.
+
+For each site view your component exposes:
+
+- Menu item published (`published=1`)
+- Access level `1` (Public) — even if the view itself requires login
+- Linked to `index.php?option=com_yourext&view=<viewname>`
+- Assigned to the hidden menu type (so it doesn't appear in any visible menu module)
+
+### Why access=1 even for login-only views
+
+Access on a menu item is checked **only when generating the URL** — not when serving the page. The component's controller is what enforces auth:
+
+```php
+public function execute($task)
+{
+    if (Factory::getApplication()->getIdentity()->guest) {
+        Factory::getApplication()->enqueueMessage(Text::_('JLIB_RULES_NOT_ALLOWED'), 'error');
+        $this->setRedirect(Route::_('index.php?option=com_users&view=login', false));
+        return;
+    }
+    // ...
+}
+```
+
+So: menu item is `access=1` (URL resolution works for everyone), controller redirects guests at request time (page is still gated). Both layers do their own job.
+
+### Install-time creation
+
+Create the hidden menu type and items via the `script.php` install postflight, or via a fresh-install SQL file (`admin/sql/install.mysql.utf8.sql`):
+
+```sql
+INSERT INTO `#__menu_types` (`menutype`, `title`, `description`)
+VALUES ('com_yourext_hidden', 'YourExt Hidden Routing', 'Hidden — provides SEF URL anchors only');
+
+INSERT INTO `#__menu` (`menutype`, `title`, `alias`, `path`, `link`, `type`, `published`, `parent_id`, `level`, `component_id`, `access`, `params`, `lft`, `rgt`, `language`, `client_id`)
+VALUES
+('com_yourext_hidden', 'Items', 'items', 'items', 'index.php?option=com_yourext&view=items', 'component', 1, 1, 1, (SELECT extension_id FROM #__extensions WHERE element='com_yourext'), 1, '{}', 0, 0, '*', 0),
+('com_yourext_hidden', 'Item', 'item', 'item', 'index.php?option=com_yourext&view=item', 'component', 1, 1, 1, (SELECT extension_id FROM #__extensions WHERE element='com_yourext'), 1, '{}', 0, 0, '*', 0);
+```
+
+Then rebuild nested-set values via `Table\Menu::rebuild()` in postflight, or accept that admin → Menus → Rebuild does the same job on first admin visit.
+
+### Symptom of getting this wrong
+
+URLs like `/component/com_yourext/items` instead of `/items`, **specifically for not-logged-in users** while logged-in admins see the clean `/items` URL. Classic "works on my machine" — the developer is logged in as Super User (access to everything), the visitor is a guest (no access to the access=2 menu item).
+
+---
+
 ## Checklist for Component Routing
 
 - [ ] Router class exists at `site/src/Service/Router.php`
@@ -237,4 +368,8 @@ $url = Route::_('index.php?option=com_example&view=articles&topic_id=' . $id . '
 - [ ] All `Route::_()` calls in templates include `&Itemid=`
 - [ ] `build()` method `unset()`s all query vars it converts to segments
 - [ ] `parse()` method sets `$segments = []` after consuming all segments
+- [ ] If using `RouterView`: callback method names match `getXxxSegment` / `getXxxId` exactly
+- [ ] If using `RouterView`: rules attached in order `MenuRules` → `StandardRules` → `NomenuRules`
+- [ ] Hidden menu type + per-view menu items created at install with `access=1`
+- [ ] Login-gated views enforce auth in the controller, NOT via menu access level
 - [ ] Autoload cache cleared after install (`administrator/cache/autoload_psr4.php`)
