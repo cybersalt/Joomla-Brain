@@ -34,6 +34,11 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - `JOOMLA5-WEB-SERVICES-API-GUIDE.md`: Building component endpoints — `X-Joomla-Token` (NOT `Authorization: Bearer`), the mandatory `plg_webservices_*` route registration, `:id` capture quirks on POST routes, ACL gate at every controller method, JsonapiView/ApiController wiring
 - `JOOMLA5-TEMPLATE-OVERRIDES.md`: `#__template_overrides` schema (`hash_id` is base64 of the relative path, NOT a hash), path resolution from `hash_id` first segment, write-side safety guards (separator-anchored containment check, PHP-extension whitelist, `opcache_invalidate`)
 - `JOOMLA5-EDGE-CASE-SCENARIOS.md`: Catalog of environmental / third-party conditions that break extensions and the patterns for detecting and handling them. Covers Akeeba Admin Tools `.htaccess` blocks, RewriteBase in subdirectory staging, Joomlatools Fileman container paths, Composer autoloader hash mismatches, non-standard log directories, CDN caching. Living reference — add new scenarios here as they're encountered.
+- `JOOMLA5-WEB-ASSETS-GUIDE.md`: Web Asset Manager (`joomla.asset.json`) — URI auto-resolution rules (never include `css/` or `js/` in `uri`), vendor-asset paths via `registerAndUseScript`, inline asset XSS-safe interpolation (`json_encode` for strings), dependency declarations including `core` and the jQuery-not-in-core gotcha for J5/6, Bootstrap 5.3 dark-mode class warnings
+- `JOOMLA5-EDITOR-API-GUIDE.md`: Modern `JoomlaEditor` JavaScript API vs deprecated `Joomla.editors.instances`, XTD button plugin pattern (`SubscriberInterface` + `onEditorButtonsSetup` + `JoomlaEditorButton.registerAction`), three button action types (insert / modal / custom), modal-iframe `postMessage` content selection, editor form-field XML `filter="JComponentHelper::filterText"` as the #1 XSS preventer
+- `JOOMLA5-TESTING-GUIDE.md`: PHPUnit + Jest patterns. Real-CMS bootstrap loading both `libraries/loader.php` and `libraries/vendor/autoload.php`, `getQueryStub()` helper anonymous-class pattern for `DatabaseQuery`, five testing gotchas (DatabaseInterface vs DatabaseDriver for `createQuery()`, CMSApplicationInterface vs CMSApplication for `getSession()`, vendor-autoloader requirement, `createStub()` vs `createMock()`, `Factory::getApplication()` setup/teardown)
+- `JOOMLA5-COMMON-GOTCHAS.md`: 17 traps from real builds — BaseController vs FormController vs AdminController security implications, J5 controller API differences (no `getInput()`/`getApplication()`), J5/J6 typed-event compatibility, plugin manifest naming (`{element}.xml` only), `$autoloadLanguage = true` and locale prefix for plugin language files, `HttpFactory` namespace (`Joomla\CMS\Http`, not `Joomla\Http`), `Text::script()` registration timing, BS5 dynamic-modal cleanup, `getStoreId()` cache invalidation in ListModel, more
+- `JOOMLA-CODING-STANDARDS.md`: PHPDoc/DocBlock conventions (alignment with two+ spaces, `@since` required, no `@author`), JavaScript ESLint flat-config (`eslint.config.mjs`), PHP_CodeSniffer setup with `joomla/coding-standards`, inline comment rules (`//` only, never `#`)
 - `COMPONENT-TROUBLESHOOTING.md`: Component installation/loading diagnostics
 - `JOOMLA3-COMPONENT-GUIDE.md`: Legacy Joomla 3 component reference
 - `JOOMLA3-PLUGIN-GUIDE.md`: Legacy Joomla 3 plugin reference
@@ -173,6 +178,16 @@ git submodule init && git submodule update
 ### Example Integration
 
 See [cs-category-grid-display](https://github.com/cybersalt/cs-category-grid-display) for a complete example.
+
+## Versioning & Changelog
+
+Joomla Brain uses semantic versioning at the repository level so consumers (the projects that include this as a submodule) can pin to a known-good revision and audit what changed when they bump.
+
+- **`CHANGELOG.md`** — section-by-section record of what landed in each Brain release. Same emoji conventions as our extension changelogs (🚀 New | 🔧 Improvements | 📦 Build | 🐛 Fixes | 🔍 Security | 📝 Docs).
+- **`CONTRIBUTORS.md`** — credit and attribution policy. Guides stay in Cybersalt's voice; named contributions are acknowledged here and in the matching `CHANGELOG.md` entry + commit message.
+- **Tags** — releases are tagged `v1.0.0`, `v1.1.0`, etc. on `main`. Bump `MINOR` when a guide is added or substantially expanded; bump `PATCH` for fixes and small clarifications.
+
+When contributing, update `CHANGELOG.md` in the same commit (or PR) as the change, and reference any external contributors in `CONTRIBUTORS.md`.
 
 ## Contributing
 Feel free to add more best practices and scripts to help Joomla developers!
