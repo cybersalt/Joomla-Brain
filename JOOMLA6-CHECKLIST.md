@@ -160,3 +160,153 @@ Same Atum template CSS variables as Joomla 5. See `.claude/skills/joomla-develop
 - `Factory::getSession()` is deprecated in 6.1 — use `Factory::getApplication()->getSession()`
 - All plugins are lazy-loaded in 6.1 — heavy constructor work only runs when plugin is triggered
 - Subform fields have a new grid layout option alongside the existing table layout
+
+---
+
+## Joomla 5 → 6 Deprecation Matrix
+
+The full set of API moves and removals between Joomla 5 and Joomla 6. Code that works against this matrix will run on Joomla 6 **without** the "Behaviour - Backward Compatibility 6" plugin, which is the bar for "true J6 native" status.
+
+### Use these (Joomla 6 native, also works on J5)
+
+| Task | Modern API |
+|---|---|
+| Database access | `$this->getDatabase()` or inject `DatabaseInterface` |
+| Build queries | `$db->createQuery()` (preferred over `$db->getQuery(true)`) |
+| Current user | `$this->getCurrentUser()` in models, `$this->getIdentity()` in views/controllers |
+| Input handling | `\Joomla\Input\Input` — **NOT** `\Joomla\CMS\Input\Input` (CMS wrapper removed in J6) |
+| Create model/table | `$this->getMVCFactory()->createModel('Name')` (MVCFactory) |
+| Input in controllers | `$this->input` (already uses `\Joomla\Input\Input` under the hood) |
+| Error handling | Throw exceptions (`\RuntimeException`, `\InvalidArgumentException`, `\UnexpectedValueException`) |
+| Web assets | `WebAssetManager` via `$wa = $this->getDocument()->getWebAssetManager()` |
+| File operations | PHP native (`file_put_contents`, `mkdir`, `is_dir`) or Symfony Filesystem — **NOT** `Joomla\CMS\Filesystem\*` |
+| `getItem()` return value | Treat as `stdClass` — direct property access only. **NOT** `CMSObject` — no `->get('x')` / `->set('x', $v)` magic |
+| Toolbar | `$this->getDocument()->getToolbar()` (see Toolbar API section below) — **NOT** `Toolbar::getInstance()` |
+| Session | `Factory::getApplication()->getSession()` — **NOT** `Factory::getSession()` |
+
+### Never use these (removed in J6 or only behind compat plugin)
+
+| Deprecated | Why | Replacement |
+|---|---|---|
+| `Factory::getDbo()` / `$this->_db` | Removed in J5 | `$this->getDatabase()` |
+| `$db->getQuery(true)` | Still works in J5/J6, deprecated pattern | `$db->createQuery()` |
+| `\Joomla\CMS\Input\Input` | Namespace moved in J6 | `\Joomla\Input\Input` |
+| `\Joomla\CMS\Filesystem\File` / `Folder` / `Path` | Moved behind compat plugin in J6, removed in J7 | PHP native or Symfony Filesystem |
+| `CMSObject` and its `->get()` / `->set()` magic | `getItem()` returns `stdClass` in J6 | Direct property access: `$item->title` |
+| `Factory::getUser()` | Deprecated | `$this->getCurrentUser()` (models) or `$this->getIdentity()` (controllers/views) |
+| `getSession()->get('user')` | Pattern superseded | `$this->getIdentity()` |
+| `$model->getError()` / `$model->setError()` | Old error pattern | Throw exceptions |
+| `new ItemModel()` (direct instantiation) | Hard-coded dependencies | `$this->getMVCFactory()->createModel('Item')` |
+| `jimport(...)` | Removed | PSR-4 autoloading |
+| `CMSObject` (the class itself) | Deprecated; removed in J7 | `stdClass` or a custom DTO class |
+| `Factory::getDate()` (legacy) | Wrapped under app | `Factory::getApplication()->getDate()` (or just `Factory::getDate()` still works in J5/6 — but the application accessor is the modern shape) |
+
+### Migration steps (mechanical pass on existing code)
+
+1. **Query builder**: search-replace `$db->getQuery(true)` → `$db->createQuery()`. Both work on J5; only `createQuery()` is guaranteed forward.
+2. **Input classes**: search-replace `use Joomla\CMS\Input\Input` → `use Joomla\Input\Input`. `$this->input` in controllers already works on both.
+3. **`CMSObject` → `stdClass`**: any code using `$item->get('property')` or `$item->set('property', $value)` on objects from `getItem()` — replace with `$item->property` and `$item->property = $value`.
+4. **Filesystem**: replace `Joomla\CMS\Filesystem\File::write($path, $content)` → `file_put_contents($path, $content)`, `Folder::create($dir)` → `mkdir($dir, 0755, true)`, etc. PHP natives are direct equivalents for most operations. For more complex needs (recursive copy, atomic writes), pull in `symfony/filesystem`.
+5. **Factory methods**:
+   - `Factory::getUser()` → `$this->getCurrentUser()` (models) / `$this->getIdentity()` (controllers/views).
+   - `Factory::getApplication()` → inject via constructor or use `$this->getApplication()`.
+   - `Factory::getDbo()` → `$this->getDatabase()` or inject `DatabaseInterface`.
+6. **Error handling**: `$model->getError()` / `$model->setError()` → try/catch with thrown exceptions (`\RuntimeException`, `\InvalidArgumentException`).
+7. **Test with the compat plugin DISABLED**: install the "Behaviour - Backward Compatibility 6" plugin then disable it. If your extension still works, it's J6-native. If it breaks, the failure points to remaining deprecation calls.
+
+---
+
+## Toolbar API (modern pattern)
+
+The modern toolbar API uses `$this->getDocument()->getToolbar()` (NOT the deprecated `Toolbar::getInstance()`) plus method-chained button factories. Use this in `View::addToolbar()`:
+
+### List view toolbar
+
+```php
+use Joomla\CMS\Helper\ContentHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Toolbar\ToolbarHelper;
+
+protected function addToolbar(): void
+{
+    $toolbar = $this->getDocument()->getToolbar();
+    $canDo   = ContentHelper::getActions('com_example');
+
+    ToolbarHelper::title(Text::_('COM_EXAMPLE_ITEMS'), 'list');
+
+    if ($canDo->get('core.create')) {
+        $toolbar->addNew('item.add');
+    }
+
+    if ($canDo->get('core.edit.state') || $canDo->get('core.delete')) {
+        // Dropdown groups related actions under one button
+        $dropdown = $toolbar->dropdownButton('status-group')
+            ->text('JTOOLBAR_CHANGE_STATUS')
+            ->toggleSplit(false)
+            ->icon('icon-ellipsis-h')
+            ->buttonClass('btn btn-action')
+            ->listCheck(true);
+
+        $childBar = $dropdown->getChildToolbar();
+
+        if ($canDo->get('core.edit.state')) {
+            $childBar->publish('items.publish')->listCheck(true);
+            $childBar->unpublish('items.unpublish')->listCheck(true);
+            $childBar->archive('items.archive')->listCheck(true);
+            $childBar->checkin('items.checkin');
+        }
+
+        if ($canDo->get('core.create') && $canDo->get('core.edit')) {
+            $childBar->popupButton('batch', 'JTOOLBAR_BATCH')
+                ->popupType('inline')
+                ->textHeader(Text::_('COM_EXAMPLE_BATCH_OPTIONS'))
+                ->url('#joomla-dialog-batch')
+                ->modalWidth('800px')
+                ->modalHeight('fit-content')
+                ->listCheck(true);
+        }
+
+        if ($canDo->get('core.delete')) {
+            $childBar->trash('items.trash')->listCheck(true);
+        }
+    }
+
+    if ($canDo->get('core.admin')) {
+        $toolbar->preferences('com_example');
+    }
+}
+```
+
+### Edit view toolbar
+
+Use a save dropdown for save variants:
+
+```php
+use Joomla\CMS\Toolbar\Toolbar;
+
+$toolbar->apply('item.apply');
+
+$saveGroup = $toolbar->dropdownButton('save-group');
+$saveGroup->configure(function (Toolbar $childBar) use ($viewName) {
+    $childBar->save($viewName . '.save');
+    $childBar->save2new($viewName . '.save2new');
+    $childBar->save2copy($viewName . '.save2copy');
+});
+
+$toolbar->cancel('item.cancel', $isNew ? 'JTOOLBAR_CANCEL' : 'JTOOLBAR_CLOSE');
+```
+
+### Available toolbar button methods (from `CoreButtonsTrait`)
+
+`addNew`, `apply`, `save`, `save2new`, `save2copy`, `cancel`, `publish`, `unpublish`, `archive`, `unarchive`, `trash`, `delete`, `checkin`, `preferences`, `help`, `back`, `link`, `versions`, `divider`
+
+For custom buttons, use `customButton()` or `popupButton()`.
+
+---
+
+## Related
+
+- [`JOOMLA-CODING-STANDARDS.md`](JOOMLA-CODING-STANDARDS.md) — PHPDoc standards your J6 migration must keep passing
+- [`JOOMLA5-TESTING-GUIDE.md`](JOOMLA5-TESTING-GUIDE.md) — real-CMS test pattern; tests against real Joomla 6 catch deprecation issues automatically
+- [`JOOMLA5-COMMON-GOTCHAS.md`](JOOMLA5-COMMON-GOTCHAS.md) — the J5/J6 controller API differences and event-dispatching compat patterns
+- [`JOOMLA5-WEB-ASSETS-GUIDE.md`](JOOMLA5-WEB-ASSETS-GUIDE.md) — WebAssetManager replaces the deprecated `JHtml::_('script', ...)` pattern
