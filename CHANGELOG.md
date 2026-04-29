@@ -23,6 +23,26 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.2.0 — 2026-04-29
+
+Second contribution batch from [Brent Cordis](https://github.com/bcordis), again sourced from [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0). This pass folds in the remaining reference material (component scaffold, library extensions, additional plugin patterns) that the v1.1.0 batch didn't cover. License-compatible (GPL-2.0-or-later); folded into Cybersalt's voice and security-first framing.
+
+### 🚀 New
+
+- **`JOOMLA5-COMPONENT-GUIDE.md`** — comprehensive component scaffold reference (~1,450 lines). Covers admin/site/api split, manifest XML, service provider with MVCFactory/ComponentDispatcherFactory/RouterFactory/CategoryFactory wiring, Extension class trait/interface pairs, controller hierarchy (BaseController vs FormController vs AdminController with security framing), AdminModel + ListModel patterns with `getStoreId()` cache-key warning, Table::check() exception pattern, modern Toolbar API via `getDocument()->getToolbar()`, form XML with `addfieldprefix`/`showon`/subform/`JComponentHelper::filterText` security, dispatcher, install/update script with Cybersalt post-install card pattern, config.xml with rules fieldset, site views with `whereIn(getAuthorisedViewLevels())`, access.xml, 13-step "adding a new entity" workflow, 20-item pre-release checklist. Cross-references existing deep-dive guides (routing, custom fields, list filters, web services, web assets, editor API, testing, gotchas, coding standards, J6 checklist) instead of duplicating. Contrib: Brent Cordis.
+- **`JOOMLA5-LIBRARY-GUIDE.md`** — installable Joomla library extensions. When to use vs. component helpers or component-bundled Composer packages, directory structure, manifest XML with `<libraryname>` + `<namespace path="src">`, PSR-4 mapping rules, library PHP class style (strict_types, _JEXEC guard, final), DatabaseInterface DI for DB access, consuming libraries from components/plugins/modules, custom form fields via `addfieldprefix` (no system plugin needed), language files (.sys.ini), packaging, package-extension ordering rule (library MUST be listed before its consumers), multiple-libraries vs. one-library-with-sub-namespaces decision, pre-release checklist. Includes the warning never to use `libraries/vendor/` as `<libraryname>` (collides with Joomla core's Composer autoloader). Contrib: Brent Cordis.
+
+### 🔧 Improvements
+
+- **`JOOMLA5-PLUGIN-GUIDE.md`** — added four sections before Example Repositories: (1) Common Plugin Groups reference table covering 14 groups (content, system, finder, task, webservices, schemaorg, user, authentication, installer, editors, editors-xtd, quickicon, fields, privacy) with the events that matter in each; (2) Task Plugin pattern with `TASKS_MAP`, `TaskPluginTrait`, `ExecuteTaskEvent`, `TaskStatus` return values, langConstPrefix-derived TITLE/DESC keys; (3) Webservices Plugin with `onBeforeApiRoute` + `ApiRouter::createCRUDRoutes`, cross-ref to web services guide; (4) Finder Plugin with `Adapter` base class for hooking custom component content into Smart Search. Contrib: Brent Cordis.
+- **`README.md`** — added the two new guides to the Contents section.
+
+### 📝 Docs
+
+- **`CONTRIBUTORS.md`** — recorded the v1.2.0 intake date and confirmed the same upstream pin (`v0.1.0` of `Joomla-Bible-Study/claude-skill-joomla`).
+
+---
+
 ## v1.1.0 — 2026-04-29
 
 Significant expansion of Joomla 5/6 component architecture coverage, testing patterns, web asset management, and editor API. Most of this batch is contributed material from [Brent Cordis](https://github.com/bcordis), sourced from [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0) (GPL-2.0-or-later, license-compatible with the Brain). See `CONTRIBUTORS.md` for the full attribution. Folded into Cybersalt's voice and aligned with the existing security-first framing.

@@ -28,8 +28,14 @@ Brent contributed a substantial body of Joomla 5/6 component architecture, testi
 - Joomla 6 deprecation matrix additions in `JOOMLA6-CHECKLIST.md` (`createQuery()` introduction, `Joomla\Input\Input` namespace move, `CMSObject` → `stdClass`, `Filesystem\File`/`Folder` deprecations, `Factory::getApplication()` migration of `Factory::getDate()` etc.).
 - Toolbar API modern pattern (added to `JOOMLA6-CHECKLIST.md` / `JOOMLA-CODING-STANDARDS.md`).
 - SEF router callback naming convention + hidden menu items pattern (added to `JOOMLA5-COMPONENT-ROUTING.md`).
+- `JOOMLA5-COMPONENT-GUIDE.md` (v1.2.0) — comprehensive component scaffold reference covering admin/site/api split, MVC factories, controller hierarchy with security framing, AdminModel + ListModel patterns, Table::check() exceptions, modern Toolbar API, form XML security, dispatcher, install/update script, access.xml, 13-step new-entity workflow, 20-item pre-release checklist.
+- `JOOMLA5-LIBRARY-GUIDE.md` (v1.2.0) — installable Joomla library extensions, manifest XML with `<libraryname>` + `<namespace>`, PSR-4 mapping rules, library PHP class style, DatabaseInterface DI, custom form fields via `addfieldprefix`, packaging, package-extension ordering.
+- Plugin guide additions (v1.2.0): Common Plugin Groups reference table (14 groups), Task Plugin pattern with `TASKS_MAP` + `TaskPluginTrait` + `ExecuteTaskEvent`, Webservices Plugin with `onBeforeApiRoute` + `createCRUDRoutes`, Finder Plugin with `Adapter` base class.
 
-Contribution intake: 2026-04-29 (against [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0)). See `CHANGELOG.md` v1.1.0 for the specific commits.
+Contribution intake:
+
+- **2026-04-29** — first batch (v1.1.0) against [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0). See `CHANGELOG.md` v1.1.0 for the specific commits.
+- **2026-04-29** — second batch (v1.2.0) against the same upstream pin (`v0.1.0`). Pulled in remaining reference material the first batch didn't cover (component scaffold, library extensions, additional plugin patterns). See `CHANGELOG.md` v1.2.0.
 
 When pulling future updates from Brent's repo, the expected pattern is:
 

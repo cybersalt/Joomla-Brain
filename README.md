@@ -23,8 +23,10 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 ## Contents
 
 ### Guides (Detailed References)
+- `JOOMLA5-COMPONENT-GUIDE.md`: Comprehensive component scaffold reference — admin/site/api split, MVC factories, controller hierarchy with security framing (BaseController vs FormController vs AdminController), AdminModel + ListModel patterns with `getStoreId()` cache key, Table::check() exception pattern, modern Toolbar API, form XML with `addfieldprefix`/`showon`/subform/`filterText` security, dispatcher, install/update script, access.xml, 13-step new-entity workflow, 20-item pre-release checklist
 - `JOOMLA5-MODULE-GUIDE.md`: Full module development guide (Dispatcher + Legacy patterns)
-- `JOOMLA5-PLUGIN-GUIDE.md`: Full plugin development guide (Content + System plugins)
+- `JOOMLA5-PLUGIN-GUIDE.md`: Full plugin development guide — Content/System plugins, 14-group reference table, Task plugin pattern (TASKS_MAP + TaskPluginTrait + ExecuteTaskEvent), Webservices plugin (`onBeforeApiRoute` + `createCRUDRoutes`), Finder plugin (Adapter base class for Smart Search)
+- `JOOMLA5-LIBRARY-GUIDE.md`: Installable Joomla library extensions — when to use, manifest XML with `<libraryname>` + `<namespace>`, PSR-4 mapping rules, library class style, DatabaseInterface DI, custom form fields via `addfieldprefix`, packaging, package-extension ordering, multiple-libraries vs. one-with-sub-namespaces
 - `JOOMLA5-COMPONENT-ROUTING.md`: Component SEF routing with RouterBase
 - `JOOMLA5-CUSTOM-FIELDS-GUIDE.md`: Creating custom fields programmatically
 - `JOOMLA5-UPDATE-SERVER-GUIDE.md`: Update server setup, authenticated downloads, `/extension.xml` behavior
