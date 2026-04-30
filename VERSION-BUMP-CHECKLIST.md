@@ -12,7 +12,10 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 - [ ] **Bump version number** in every manifest XML (component, plugin, module, package — whatever the extension ships)
 - [ ] **Update CHANGELOG.md** — add new version section at top with emoji headers (🚀 🔧 📦 🐛 🔒 📝 etc.)
 - [ ] **Update CHANGELOG.html** — matching article-ready HTML (no `<html>`, `<head>`, `<body>`, or `<style>` tags)
-- [ ] **Update README.md** — if features, configuration, or build instructions changed
+- [ ] **Refresh README.md.** Don't just ask "did features change" — also look for *drift*. Two specific failure modes that have bitten Cybersalt extensions:
+    - **Stale version numbers in section headings.** A heading like `## What ships in v2.0` written when 2.0 was current never auto-updates. Run `grep -nE '\bv?[0-9]+\.[0-9]+(\.[0-9]+)?\b' README.md` to enumerate every version mention; check each line is either still correct or genuinely historical (e.g. *"v0.9.0 closed the live RCE primitive"* is fine forever, but *"What ships in v2.0"* goes stale the moment 2.1 ships). Prefer version-agnostic wording (*"What's in the box"*, *"Components"*) so the doc doesn't decay every release.
+    - **Brand names that drifted.** If the user-facing brand changed in any prior release (e.g. `CS Template Integrity` → `Cybersalt Template Integrity` in cs-template-integrity v2.2), install instructions and screenshot captions in the README often still reference the old name. `grep -n '<old-brand>' README.md` to catch them.
+    Also: if features changed, refresh the feature list. If install flow changed, refresh the install steps. If a major release reorganized the dashboard, refresh any UI walkthrough.
 - [ ] **Rebuild zip** with 7-Zip. The build script produces a timestamped working filename (`{ext_name}_v{version}_{YYYYMMDD}_{HHMM}.zip`) — that's the iteration artifact.
 - [ ] **Copy the timestamped zip to a clean version-only name** (`{ext_name}_v{version}.zip`) before uploading. The clean name is what goes on the GitHub release; the timestamped name stays local. Compute the SHA256 of the clean-named copy for `updates.xml`.
 - [ ] **Commit and push** to GitHub (manifests + CHANGELOGs + any code changes from the security review)
