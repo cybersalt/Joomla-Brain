@@ -337,3 +337,69 @@ If `modal_menu`, `modal_contact`, `modal_user` ever fail the same way in plugin 
 | `modal_user` | `SELECT id, name FROM #__users WHERE block = 0 ORDER BY name` |
 
 Note: `type="menuitem"` is a separate field type from `modal_menu` and DOES work in plugin settings — use that for menu item selection. The table above is for the modal variants.
+
+---
+
+## 12. Cybersalt action-button palette (Tim's preferred colors)
+
+Established on `cs-template-integrity` v2.1 after several rounds of "this button doesn't read right." When pairing two primary actions on an admin dashboard (e.g. "Method 1 / Method 2", or "Manual / Automated"), Tim's preferred combo is **Cybersalt orange + Bootstrap blue** — reads well in both light and dark mode, doesn't read as a warning, and the two colors don't compete with each other.
+
+| Role | Class | Color | Notes |
+|---|---|---|---|
+| Primary action A (always available, no precondition) | custom `.csti-method-1-btn` | `#dc6b1a` solid + white text | "Cybersalt orange". Hover: `#b85614`. Tim explicitly prefers this over `btn-warning` because yellow reads as caution, not action. |
+| Primary action B (preferred path when ready) | `btn-primary` | Bootstrap blue + white text | When the action requires precondition (e.g. saved API key) AND it's met, use solid `btn-primary`. |
+| Primary action B (precondition not met) | `btn-outline-secondary` | Gray outline | Stays clickable so the link can still anchor-jump to the explanation card. Tooltip says what's missing. |
+| Navigation ("go fetch data") | `btn-secondary` | Gray | Sessions, Backups, Site Templates, Action log — anything that's just a link to another view. Tim specifically does NOT want these to be `btn-primary` / `btn-warning` / `btn-light` — they shouldn't compete with the primary actions or look like warnings. |
+| Destructive / "you sure?" rebuilds | custom `.csti-rescan-btn` | Mode-aware (see below) | Things like Rescan, Reset, Rebuild. |
+| Diagnostics / info modal trigger | `btn-info` | Cyan | One-off "open the diag panel" — fine as `btn-info`. |
+
+### Avoid
+
+- `btn-warning` (yellow solid) for non-warning primary actions — Tim explicitly disliked this. Yellow reads as caution.
+- `btn-outline-warning` for buttons that need to read in **light** mode — yellow text on white background is unreadable. Outline-warning works fine in dark mode (yellow-on-black) but flips to bad contrast in light mode.
+- `btn-light` in admin dashboards — Atum dark mode renders it as a tinted blue-gray with dark text; the contrast is poor. Use `btn-secondary` instead for neutral nav buttons.
+
+### Mode-aware Rescan button (the `.csti-rescan-btn` recipe)
+
+For destructive/rebuild actions you want to read as a warning in dark mode but stay readable in light mode:
+
+```css
+.btn.csti-rescan-btn {
+    background-color: var(--bs-warning, #ffc107);
+    border-color: var(--bs-warning, #ffc107);
+    color: #212529;
+}
+[data-bs-theme="dark"] .btn.csti-rescan-btn,
+[data-color-scheme="dark"] .btn.csti-rescan-btn {
+    background-color: transparent;
+    color: var(--bs-warning, #ffc107);
+    border-color: var(--bs-warning, #ffc107);
+}
+```
+
+Light mode = solid yellow with default dark text (high contrast, reads as warning).
+Dark mode = outline look, yellow text on near-black background (high contrast, reads as warning, matches Atum's "danger zone" aesthetic).
+
+Joomla's Atum admin uses `[data-bs-theme="dark"]` AND `[data-color-scheme="dark"]` — target both selectors so the rule fires regardless of which attribute the active template applies.
+
+### Cybersalt orange button (the `.csti-method-1-btn` recipe)
+
+```css
+.btn.csti-method-1-btn {
+    background-color: #dc6b1a;
+    border-color: #dc6b1a;
+    color: #ffffff;
+}
+.btn.csti-method-1-btn:hover,
+.btn.csti-method-1-btn:focus,
+.btn.csti-method-1-btn:active {
+    background-color: #b85614;
+    border-color: #b85614;
+    color: #ffffff;
+}
+.btn.csti-method-1-btn:focus-visible {
+    box-shadow: 0 0 0 0.25rem rgba(220, 107, 26, 0.35);
+}
+```
+
+Specificity: prefix the selector with `.btn` (so it's `.btn.csti-method-1-btn`, two classes) so it wins over Bootstrap's `.btn` defaults without needing `!important`.
