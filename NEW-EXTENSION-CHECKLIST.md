@@ -2,6 +2,9 @@
 
 Follow this checklist in order when creating a new Joomla extension.
 
+> [!IMPORTANT]
+> **Also run through `JOOMLA-EXTENSION-WISHLIST.md`** before declaring v1.0.0 ready. The wishlist covers cross-cutting UX/operational expectations (lock-out modals during long-running ops, API-billing transparency, automated CI, dark-mode testing, etc.) that aren't required by Joomla but are required by Cybersalt. This checklist handles the scaffold and security baseline; the wishlist handles the polish.
+
 ## Setup
 
 - [ ] **Create GitHub repo** at `github.com/cybersalt/cs-{name}`

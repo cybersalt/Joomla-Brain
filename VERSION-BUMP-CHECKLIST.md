@@ -2,6 +2,9 @@
 
 Follow this checklist every time you bump the version of a Cybersalt extension.
 
+> [!TIP]
+> **For MINOR or MAJOR bumps, also run through `JOOMLA-EXTENSION-WISHLIST.md`** to confirm the cross-cutting expectations (lock-out modals, API-billing transparency, dark-mode testing, CI, etc.) are still in place. PATCH releases can usually skip the wishlist pass unless they touched UI or third-party API integration.
+
 ## Steps (in order)
 
 - [ ] **Bump version number** in manifest XML (e.g., `stalecachebuster.xml`, `mod_name.xml`)
