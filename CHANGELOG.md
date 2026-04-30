@@ -23,6 +23,21 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.3.0 — 2026-04-29
+
+Adds a new cross-cutting "wishlist" guide for UX/operational expectations that apply to every Cybersalt Joomla extension regardless of type.
+
+### 🚀 New
+
+- **`JOOMLA-EXTENSION-WISHLIST.md`** — running list of "wish every extension had" patterns that aren't required by Joomla but make the difference between professional and hobby-grade. New entries from [Brent Cordis](https://github.com/bcordis)'s 2026-04-29 chat suggestions: (1) lock-out modal during long-running operations (Bootstrap 5 modal with `static` backdrop, names the operation, shows progress when divisible, prevents double-submits); (2) API-billing transparency (disclose subscription-vs-API billing, ballpark per-call cost, own-key vs. routed, where data goes); (3) automated lint+test on every push (PHP_CodeSniffer + ESLint + PHPUnit + Jest + package validation in GitHub Actions, modeled on Joomla Bible Study's CI). Plus consolidated cross-references to existing Brain guidance already covering: post-install card, 15-language coverage, security baseline, changelog format, custom CSS tab on modules, dark-mode testing.
+- **`README.md`** — added wishlist guide to Contents.
+
+### 📝 Docs
+
+- The wishlist is intentionally a *checklist*, not a tutorial — implementation detail stays in the per-type guides; the wishlist just tells you what to verify before shipping.
+
+---
+
 ## v1.2.1 — 2026-04-29
 
 Small clarifying addition to `JOOMLA5-MODULE-GUIDE.md` after a second-pass diff against [Brent Cordis](https://github.com/bcordis)'s reference material. No new file, no breaking change.

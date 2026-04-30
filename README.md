@@ -50,6 +50,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - `JOOMLA6-CHECKLIST.md`: Pre-release checklist for Joomla 6
 - `NEW-EXTENSION-CHECKLIST.md`: Creating a new Cybersalt extension
 - `VERSION-BUMP-CHECKLIST.md`: Version bump steps
+- `JOOMLA-EXTENSION-WISHLIST.md`: Cross-cutting UX/operational expectations every Cybersalt extension should ship with — lock-out modals during long-running operations, API-billing transparency, automated lint+test on every push, plus consolidated reminders for post-install card, 15-language coverage, security baseline, dark-mode testing
 
 ### Build & Packaging
 - `PACKAGE-BUILD-NOTES.md`: Package naming, 7-Zip requirement, common errors
