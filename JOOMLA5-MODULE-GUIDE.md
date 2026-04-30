@@ -311,6 +311,93 @@ class Dispatcher extends AbstractModuleDispatcher
 }
 ```
 
+### Dispatcher-side Helper Injection (HelperFactoryAware)
+
+If your module's data retrieval lives in a Helper class (not inline in the Dispatcher), wire the Helper into the Dispatcher via Joomla's `HelperFactoryAwareInterface` + `HelperFactoryAwareTrait` rather than instantiating it manually. This is the pattern Joomla core uses and the cleanest way to keep data logic out of `getLayoutData()`.
+
+**Provider** (`services/provider.php`) — register both factories:
+
+```php
+use Joomla\CMS\Extension\Service\Provider\HelperFactory;
+use Joomla\CMS\Extension\Service\Provider\Module;
+use Joomla\CMS\Extension\Service\Provider\ModuleDispatcherFactory;
+
+$container->registerServiceProvider(new ModuleDispatcherFactory('\\Cybersalt\\Module\\Example'));
+$container->registerServiceProvider(new HelperFactory('\\Cybersalt\\Module\\Example\\Site\\Helper'));
+$container->registerServiceProvider(new Module());
+```
+
+**Dispatcher** — implement the interface, use the trait, pull the helper:
+
+```php
+namespace Cybersalt\Module\Example\Site\Dispatcher;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
+use Joomla\CMS\Helper\HelperFactoryAwareInterface;
+use Joomla\CMS\Helper\HelperFactoryAwareTrait;
+
+class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareInterface
+{
+    use HelperFactoryAwareTrait;
+
+    protected function getLayoutData(): array
+    {
+        $data = parent::getLayoutData();
+
+        // Joomla injects the HelperFactory automatically — pull a helper by name.
+        $data['items'] = $this->getHelperFactory()
+            ->getHelper('ExampleHelper')
+            ->getItems($data['params'], $this->getApplication());
+
+        return $data;
+    }
+}
+```
+
+**Helper** — pure data retrieval, with `DatabaseAwareTrait` for DB access:
+
+```php
+namespace Cybersalt\Module\Example\Site\Helper;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Application\CMSApplicationInterface;
+use Joomla\Database\DatabaseAwareInterface;
+use Joomla\Database\DatabaseAwareTrait;
+use Joomla\Registry\Registry;
+
+class ExampleHelper implements DatabaseAwareInterface
+{
+    use DatabaseAwareTrait;
+
+    public function getItems(Registry $params, CMSApplicationInterface $app): array
+    {
+        $count = (int) $params->get('count', 5);
+        $db    = $this->getDatabase();
+
+        $query = $db->createQuery()
+            ->select($db->quoteName(['id', 'title', 'alias']))
+            ->from($db->quoteName('#__example_items'))
+            ->where($db->quoteName('published') . ' = 1')
+            ->order($db->quoteName('created') . ' DESC')
+            ->setLimit($count);
+
+        $db->setQuery($query);
+
+        return $db->loadObjectList() ?: [];
+    }
+}
+```
+
+> [!IMPORTANT]
+> The helper **must** implement `DatabaseAwareInterface`, not just `use` the trait. The container only injects `$db` when the interface is present — otherwise `$this->getDatabase()` returns `null` and every query fails silently. Same gotcha that bites com_ajax helpers below.
+
+**Why use this over manual instantiation?** The dispatcher's helper factory is preconfigured with the module's namespace, so `getHelper('ExampleHelper')` resolves to `Cybersalt\Module\Example\Site\Helper\ExampleHelper` automatically. You don't `new` anything, you don't `use` the FQCN at the top of the dispatcher, and switching helpers is a one-string change.
+
+---
+
 ## Template File (tmpl/default.php)
 
 ```php

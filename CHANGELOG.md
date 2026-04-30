@@ -23,6 +23,16 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.2.1 — 2026-04-29
+
+Small clarifying addition to `JOOMLA5-MODULE-GUIDE.md` after a second-pass diff against [Brent Cordis](https://github.com/bcordis)'s reference material. No new file, no breaking change.
+
+### 🔧 Improvements
+
+- **`JOOMLA5-MODULE-GUIDE.md`** — added a "Dispatcher-side Helper Injection (HelperFactoryAware)" subsection showing the `HelperFactoryAwareInterface` + `HelperFactoryAwareTrait` pattern on the Dispatcher class, with `$this->getHelperFactory()->getHelper(...)` from inside `getLayoutData()`. Existing guide already registered `HelperFactory` in `services/provider.php` and showed a standalone helper, but never explicitly wired the two together on the dispatcher side. Includes the same `DatabaseAwareInterface` (not just trait) gotcha the com_ajax section flags later. Contrib: Brent Cordis (source: Joomla-Bible-Study/claude-skill-joomla v0.1.0 references/module.md).
+
+---
+
 ## v1.2.0 — 2026-04-29
 
 Second contribution batch from [Brent Cordis](https://github.com/bcordis), again sourced from [Joomla-Bible-Study/claude-skill-joomla v0.1.0](https://github.com/Joomla-Bible-Study/claude-skill-joomla/releases/tag/v0.1.0). This pass folds in the remaining reference material (component scaffold, library extensions, additional plugin patterns) that the v1.1.0 batch didn't cover. License-compatible (GPL-2.0-or-later); folded into Cybersalt's voice and security-first framing.
