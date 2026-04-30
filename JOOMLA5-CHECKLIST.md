@@ -45,13 +45,14 @@
 
 ### Update Server (for GitHub-hosted extensions)
 - [ ] `<updateservers>` in manifest XML points to raw `updates.xml` on GitHub
-- [ ] `<changelogurl>` in manifest XML points to raw `CHANGELOG.html` on GitHub
+- [ ] `<changelogurl>` in manifest XML points to a `changelog.xml` on GitHub raw — **NOT `CHANGELOG.html`**. Joomla's extension manager and update flow expect Joomla-format changelog XML at this URL (`<changelogs>` root with one `<changelog>` per version, containing `<addition>`/`<fix>`/`<security>`/`<language>`/`<change>`/`<remove>`/`<maintenance>`/`<note>` items). HTML at this URL produces an empty modal when the user clicks the version badge in Extension Manager. CHANGELOG.html / CHANGELOG.md remain useful as the human-readable pair (linked from README) but they are not what `<changelogurl>` should reference. cs-template-integrity shipped this wrong from v2.0 through v2.3.1 — modal was empty for ~6 releases. Fixed in v2.3.2 by adding `changelog.xml` and switching both the package manifest and `updates.xml` to point at it.
+- [ ] **Same `<changelogurl>` value in both `pkg_*.xml` AND `updates.xml`.** They are two independent fields read at different times: the package manifest URL is baked into `manifest_cache` at install time and used by Extension Manager → version badge; the updates.xml URL is read fresh on every update poll. Both should point at `changelog.xml`.
 - [ ] `updates.xml` has correct `<version>`, `<element>`, `<type>`, `<folder>`
 - [ ] `<downloadurl>` points to the GitHub release asset (non-timestamped filename)
 - [ ] `<sha256>` checksum included (generate with `sha256sum` on the zip)
 - [ ] `<targetplatform>` set (e.g., `version="5\.[0-9]+"`)
 - [ ] `<php_minimum>` set (e.g., `8.1`)
-- [ ] GitHub Release created with both timestamped and non-timestamped zip filenames
+- [ ] GitHub Release created with **only the non-timestamped zip filename** (`{ext_name}_v{version}.zip`). The timestamped zip is the local iteration artifact — keep it on disk, do NOT upload it to the release.
 
 ### GitHub Release
 - [ ] GitHub Release created via `gh release create vX.Y.Z`
