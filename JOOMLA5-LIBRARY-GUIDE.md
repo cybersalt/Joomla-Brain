@@ -378,6 +378,16 @@ When a project ships a component + plugins + library together, wrap them in a pa
 > [!IMPORTANT]
 > **List the library before any extension that depends on it.** Joomla installs the files in the order they appear. If `com_mycomponent`'s install script tries to instantiate a class from `lib_mylib`, the library must already be on disk and registered first.
 
+> [!IMPORTANT]
+> **The `<files>` element needs a `folder` attribute if the child zips live in a subdirectory inside the package zip.** If you build the package zip with the child zips at the root, the manifest above (no `folder=`) is fine. If your build script puts them in `packages/` (a common convention used by Akeeba and many others), the manifest must say `<files folder="packages">`. Mismatch produces this Joomla error on install:
+>
+> ```
+> Install path does not exist.
+> Package Install: There was an error installing an extension: com_xxx.zip
+> ```
+>
+> The error means Joomla looked for `com_xxx.zip` at the package zip root and didn't find it because the build script put it in `packages/com_xxx.zip`. Either flatten the child zips to the package root, or add `folder="packages"` to the `<files>` element.
+
 ---
 
 ## Multiple libraries vs. one library with sub-namespaces
