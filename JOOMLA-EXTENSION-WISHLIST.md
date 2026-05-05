@@ -169,6 +169,92 @@ Add a `<fieldset name="support">` to `config.xml` with the three fields. Use `Su
 
 ---
 
+## 🔍 Filter Every Column That's Worth Filtering
+
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+
+**Pattern:** When a list view has columns like Status, Package, Type, Result, etc., every one of those enumerated columns should have a corresponding filter in the filter bar (or filter row above the table). If a user can see a column and it has a finite set of values, they should be able to filter to just that value.
+
+1. **Enumerated columns** (status, type, category, result) → dropdown filter populated from existing values in the data (so empty options aren't shown).
+2. **Free-text columns** (domain, email, name) → covered by the global search box, but optionally given a dedicated text filter when the list is large.
+3. **Date columns** (created, last_check, release_date) → date range filter (today, yesterday, last 7 days, last 28 days, custom range).
+4. **Boolean columns** (is_latest, is_stable, is_published) → simple Yes/No filter.
+5. **Foreign key columns** (package, category, author) → dropdown of available parent items.
+
+The goal: if a user looks at the list and asks "show me only the X ones" the answer is always one click away.
+
+**Why it matters:** Lists with limited filtering force users to scan visually or learn unintuitive search syntax. A filter per filterable column means the user's mental model ("I want to see only X") matches the UI directly. Especially important for extensions where buyers/admins are looking at potentially hundreds of rows.
+
+**Implementation pointer:** Joomla 5's filter bar pattern (see `JOOMLA5-LIST-FILTERS-GUIDE.md`). For dynamic dropdowns populated from data, use a custom form field type that queries `DISTINCT column FROM table` (see cs-download-id-manager's `EventtypeField` and `ResulttypeField`). For date ranges, a `<select>` with preset ranges (today/yesterday/7days/28days) plus a "Custom…" option that reveals from/to date pickers is the cleanest UX.
+
+---
+
+## 🏷 Admin Page Titles With Vendor + Component + View
+
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+
+**Pattern:** Every admin page's `ToolbarHelper::title()` should follow the format: **`{Vendor} {Component Name} {View Name}`** — for example "Cybersalt Update Access Manager Dashboard", "Cybersalt Update Access Manager Packages", "Cybersalt Update Access Manager Edit Installation".
+
+Don't show just the view name ("Dashboard", "Packages") — that loses context when the admin has multiple Cybersalt extensions installed and is rapidly switching between them. The full title at the top of the page is part of how an admin orients themselves.
+
+**Why it matters:** When you're a site admin with 10 installed extensions, the breadcrumbs and Joomla menu are not always visible. The page title is the most-glanced piece of UI. Repeating the vendor + extension name in every admin title makes "where am I right now?" answerable without looking elsewhere.
+
+**Implementation pointer:** Build a single language constant per view:
+
+```ini
+COM_CSUPDATEACCESSMANAGER_TITLE_DASHBOARD="Cybersalt Update Access Manager Dashboard"
+COM_CSUPDATEACCESSMANAGER_TITLE_PACKAGES="Cybersalt Update Access Manager Packages"
+COM_CSUPDATEACCESSMANAGER_TITLE_PACKAGE_NEW="Cybersalt Update Access Manager — New Package"
+COM_CSUPDATEACCESSMANAGER_TITLE_PACKAGE_EDIT="Cybersalt Update Access Manager — Edit Package"
+```
+
+Then in each View's `addToolbar()`:
+
+```php
+ToolbarHelper::title(Text::_('COM_CSUPDATEACCESSMANAGER_TITLE_DASHBOARD'), 'dashboard');
+```
+
+Avoid the temptation to keep one short string ("Dashboard") and concatenate the vendor name in PHP — translators expect the full string per language constant.
+
+---
+
+## 🟢🔴 Yes/No Toggles Should Be Green and Red
+
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+
+**Pattern:** Joomla's default `type="radio"` with `class="btn-group"` (the Yes/No pill toggle pattern) renders as plain blue or grey buttons. Override the styling so:
+
+1. **Selected "Yes"** → solid green button (`bg-success`).
+2. **Selected "No"** → solid red button (`bg-danger`).
+3. **Unselected** → outline only (`btn-outline-success` / `btn-outline-danger` so the option is still visible at low contrast).
+
+Apply this consistently to **every** Yes/No field across admin and frontend.
+
+**Why it matters:** Toggle states should be readable at a glance. Blue-on-blue or grey-on-grey forces the user to read the labels to know which is selected. Green = "this is on / will happen", red = "this is off / will not happen" matches universal traffic-light intuition.
+
+**Implementation pointer:** In `media/css/admin.css` (or per-extension equivalent):
+
+```css
+/* Joomla 5 renders radio btn-groups with .btn-group > input + label */
+.btn-group > input[type="radio"]:checked + label.btn-outline-secondary[data-value="1"],
+.btn-group > input[type="radio"]:checked + label[for$="0"] {
+    /* Yes when selected */
+    background-color: var(--bs-success);
+    border-color: var(--bs-success);
+    color: #fff;
+}
+.btn-group > input[type="radio"]:checked + label[for$="1"] {
+    /* No when selected */
+    background-color: var(--bs-danger);
+    border-color: var(--bs-danger);
+    color: #fff;
+}
+```
+
+**Caveat:** Joomla's exact rendering differs between J3, J4, and J5. Test in dark mode too. The simplest robust approach is to inspect a rendered Yes/No field on a real install and adjust the selectors accordingly. Document the working CSS in [[JOOMLA5-UI-PATTERNS.md]] once stable.
+
+---
+
 ## ➕ Adding to This List
 
 When you encounter something that *should* be in every extension but isn't here yet, add a section using the same template:
