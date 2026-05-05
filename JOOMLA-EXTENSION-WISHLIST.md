@@ -114,6 +114,61 @@ Every admin UI is tested with Joomla's dark template active before release. No h
 
 ---
 
+## 📊 Hotlinked Dashboard Stats
+
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+
+**Pattern:** When a component has a Dashboard view with stat cards (active items, today's activity, totals, etc.), every card should be **clickable** and navigate to the relevant filtered list view. Not a static infographic — an entry point.
+
+1. **Each card wraps in an `<a href>`** that builds a URL with the filter pre-applied: `index.php?option=com_yourext&view=items&filter[status]=active`.
+2. **Stats grouped into sections** with subheadings (e.g., "Today's Activity", "All-Time Totals", "Catalog & Security") rather than one long row of cards.
+3. **Visual feedback on hover** so it's clear they're clickable: subtle lift + shadow via CSS `transform: translateY(-2px)` + `box-shadow`.
+4. **Color-coded by meaning** using Bootstrap utility classes (`text-success` for healthy counts, `text-warning` for items needing attention, `text-danger` for failures/reports).
+
+**Why it matters:** Dashboards that don't navigate are read-only walls of numbers. The natural next question after "how many failed checks today?" is "which ones?" — make that one click, not three. Reduces "I have to remember which menu item to click" friction for both new and experienced admins.
+
+**Implementation pointer:** Build URLs with `Route::_()` and Joomla's filter URL convention `filter[fieldname]=value`. Filter values must match what the model's `populateState()` expects. CSS hover effect on a `.dashboard-stat-card` class — see `cs-download-id-manager` for a working example. For filters that combine multiple statuses (e.g., "reported" = suspended + has report_reason), the model needs to translate the filter value into the actual SQL conditions.
+
+---
+
+## 🆘 Built-In Support Area
+
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+
+**Pattern:** Every extension should have a configurable "Support Contact" section in component options (or a parameter group for plugins/modules) that defines:
+
+1. **Support email** — where users can reach help
+2. **Support URL** — link to a contact form or knowledge base
+3. **Support label** — how to refer to support in messages (e.g., "Cybersalt support", "the development team")
+
+Plus a **`SupportHelper` class** (or equivalent) that builds a consistent "please contact …" sentence used everywhere errors surface — API responses, error pages, denial messages, frontend cards. Never hardcode a generic "contact support" string.
+
+The component should also have a **visible Support panel/tab** in the admin UI showing these values plus links to documentation, the changelog, and the GitHub issues page (if open source). New users land here when something breaks.
+
+**Why it matters:** When something goes wrong on a customer site, the message says "Please contact support" — but support contact info isn't in the message. The user has to leave the error, find the extension's website, find the support page, and explain the error from memory. A configurable support helper means every error message can include the right email/URL inline. The visible Support panel reduces "where do I go for help?" friction.
+
+**Implementation pointer:**
+
+```php
+// admin/src/Helper/SupportHelper.php
+public static function getContactSentence(): string
+{
+    $params = ComponentHelper::getParams('com_yourext');
+    $email = trim($params->get('support_email', ''));
+    $url   = trim($params->get('support_url', ''));
+    $label = trim($params->get('support_label', 'our support team')) ?: 'our support team';
+
+    $parts = array_filter([$email, $url]);
+    return empty($parts)
+        ? 'Please contact ' . $label . ' for assistance.'
+        : 'Please contact ' . $label . ' (' . implode(' / ', $parts) . ') for assistance.';
+}
+```
+
+Add a `<fieldset name="support">` to `config.xml` with the three fields. Use `SupportHelper::getContactSentence()` everywhere a "contact support" message is shown. See `cs-download-id-manager` for a working example.
+
+---
+
 ## ➕ Adding to This List
 
 When you encounter something that *should* be in every extension but isn't here yet, add a section using the same template:
