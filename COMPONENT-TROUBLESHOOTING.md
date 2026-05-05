@@ -767,6 +767,54 @@ private function getReturnUrl(): string
 
 ---
 
+## File Uploads in Admin Forms — Don't Use `type="file"` Form Field
+
+**Symptom**: User selects a file in your admin edit form, clicks Save, the record saves successfully but the file never gets uploaded. No error, just silently doesn't work.
+
+**Cause**: Joomla's `type="file"` form field gets filtered/stripped during `Form::filter()` in `AdminModel::save()`. The file upload data never reaches your save logic.
+
+**Fix**: Don't render the file input through Joomla's Form layer. Add it as plain HTML in the template, outside the `jform[]` namespace:
+
+```php
+<!-- In the template, NOT in form XML -->
+<div class="control-group mb-3">
+    <div class="control-label">
+        <label for="package_file"><?php echo Text::_('UPLOAD_FILE'); ?></label>
+    </div>
+    <div class="controls">
+        <input type="file" name="package_file" id="package_file" accept=".zip" class="form-control">
+    </div>
+</div>
+```
+
+Then in your model's `save()` method, read the file directly from `$_FILES` (top-level, not from `jform`):
+
+```php
+public function save($data): bool
+{
+    $app = Factory::getApplication();
+
+    // File input is at top level, not inside jform
+    $upload = $app->getInput()->files->get('package_file', null, 'raw');
+
+    if (!empty($upload) && is_array($upload) && empty($upload['error']) && !empty($upload['tmp_name'])) {
+        // ... process the upload, copy to target dir, etc.
+        // Set the resulting filename on $data so it gets saved with the record
+        $data['filename'] = $sanitizedFilename;
+    }
+
+    return parent::save($data);
+}
+```
+
+**Don't forget**:
+- The `<form>` element needs `enctype="multipart/form-data"`
+- Validate the file extension before saving (`pathinfo($upload['name'], PATHINFO_EXTENSION)`)
+- Use `\Joomla\Filesystem\File::makeSafe()` on the filename to prevent path traversal
+- Use `\Joomla\Filesystem\File::upload()` to move the file (handles `move_uploaded_file` plus permissions)
+
+---
+
 ## Resources
 
 - [Joomla 5.3 Pagination API](https://api.joomla.org/cms-5/classes/Joomla-CMS-Pagination-Pagination.html)

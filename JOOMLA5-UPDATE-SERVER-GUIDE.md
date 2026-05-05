@@ -166,7 +166,54 @@ $query = $db->getQuery(true)
 $db->setQuery($query)->execute();
 ```
 
-**Warning**: Joomla's "Rebuild Update Sites" feature (in System > Update Sites) can wipe `extra_query`. Akeeba handles this by re-setting it on every page load via a system plugin.
+**Warning**: Joomla's "Rebuild Update Sites" feature (in System > Update Sites) can wipe `extra_query`. Joomla also recreates the update site record when the extension is upgraded — wiping `extra_query` again. Akeeba handles this by re-setting it on every page load via a system plugin. For extensions where users link credentials via a dashboard, re-running the link action sets it again.
+
+---
+
+## targetplatform Regex Gotcha
+
+**This is a common cause of "no update detected" issues** even when the XML returns correctly.
+
+The `<targetplatform>` element uses a **regex** that must match the user's Joomla version. A common mistake is to use the user's specified minimum version directly:
+
+```xml
+<!-- WRONG: only matches Joomla 5.0.x, blocks 5.1+, 5.2+, etc. -->
+<targetplatform name="joomla" version="5.0\.[0-9]+" />
+
+<!-- CORRECT: matches any 5.x version -->
+<targetplatform name="joomla" version="5\.[0-9]+" />
+```
+
+When generating the regex from a `min_joomla_version` field, extract only the **major** version number:
+
+```php
+$minJoomla = $version->min_joomla_version ?: '5.0';
+$majorVersion = (int) explode('.', $minJoomla)[0];
+$xml .= '<targetplatform name="joomla" version="' . $majorVersion . '\.[0-9]+" />';
+```
+
+**Symptom**: The update XML returns a valid `<update>` block, but Joomla shows no updates available. The targetplatform regex didn't match the running Joomla version.
+
+---
+
+## SHA256 Checksum (Best Practice)
+
+Without a `<sha256>` element in your update XML, Joomla shows this warning during update:
+
+> *"This extension does not provide a checksum for validation of the integrity of the downloaded file."*
+
+Compute the hash when storing/uploading the ZIP and include it in the update XML:
+
+```php
+// On file upload, compute and store the hash:
+$hash = hash_file('sha256', $targetPath);
+$data['sha256'] = $hash;
+
+// In the update XML:
+$xml .= '<sha256>' . htmlspecialchars($version->sha256) . '</sha256>';
+```
+
+The element goes inside `<update>`, not inside `<downloads>` — the same level as `<element>`, `<version>`, etc.
 
 ---
 
