@@ -42,22 +42,38 @@ And both files must exist inside the plugin directory at `plugins/system/xxx/lan
 
 ---
 
-## 2b. Plugin field labels shown in OTHER edit screens MUST live in `.sys.ini`
+## 2b. Plugin field labels shown in OTHER edit screens: call `$this->loadLanguage()` in `onContentPrepareForm`
 
 **Symptom:** the plugin's field labels render correctly on the plugin's own settings screen (System &rarr; Plugins &rarr; *Edit*), but the same constants render as raw `PLG_SYSTEM_XYZ_FIELD_FOO_LABEL` placeholders when the plugin injects fields into a *different* component's edit form. Common case: a system plugin that uses `onContentPrepareForm` to add a tab to `com_menus.item`, `com_content.article`, `com_modules.module`, etc. The fields appear, but the labels are constants.
 
-**Cause:** Joomla auto-loads a plugin's `.ini` file only when *the plugin itself is being rendered* (its own edit screen, or when the plugin runs at site/admin runtime). The Menu/Article/Module edit screens load `com_menus`/`com_content`/`com_modules` language, not the plugin's `.ini`. The `.sys.ini`, however, is loaded broadly by the installer and the Plugin Manager list, and is generally available across more contexts.
+**Cause:** Joomla loads a plugin's language files automatically when *the plugin itself is being rendered* (its own settings screen, or when the plugin executes at runtime). When the plugin's `onContentPrepareForm` event fires inside another component's edit screen, the *other* component's language is loaded — `com_menus`, `com_content`, `com_modules` — but the plugin's own `.ini` / `.sys.ini` are NOT auto-loaded in that context. So the injected fields' label constants resolve to nothing.
 
-**Fix:** duplicate every label/description constant from `.ini` into `.sys.ini`. The two files can have overlapping keys with no harm. Treat `.sys.ini` as the canonical home for any label that needs to render OUTSIDE the plugin's own settings page:
+**Fix:** call `$this->loadLanguage()` inside the `onContentPrepareForm` handler before you inject the form. `CMSPlugin::loadLanguage()` loads both the `.ini` and `.sys.ini` for the plugin in the current language. One line, fixes the whole thing:
 
-- Field labels for the tab/fields you inject into another component's form.
-- Postflight install-card strings (the postflight context loads `.sys.ini`, not `.ini`).
-- The vendor-name / "support team" / generic boilerplate constants used in install card copy.
-- Anything shown by `Joomla\CMS\Plugin\PluginHelper::getPlugin('group', 'name')` callers in any context other than the plugin's own runtime.
+```php
+public function onContentPrepareForm(Event $event): void
+{
+    $form = $event->getArgument('0');
+    if (!$form instanceof Form) {
+        return;
+    }
+    if ($form->getName() !== 'com_menus.item') {
+        return;
+    }
 
-**Confirmed test:** `cs-menu-conditions` v0.1.0 first ship had Conditions-tab labels in `.ini` only. Labels rendered as `PLG_SYSTEM_CSMENUCONDITIONS_FIELD_*_LABEL` on the menu item edit screen even though the same plugin's own settings page rendered them correctly. Moving every label into `.sys.ini` fixed it (2026-05-06).
+    // Other component's edit screen does NOT auto-load this plugin's
+    // language; without this call, every injected field label renders
+    // as its raw PLG_SYSTEM_XYZ_FIELD_*_LABEL constant.
+    $this->loadLanguage();
 
-**Easiest pattern (and the one cs-articles-module-maxxed and cs-menu-conditions use):** keep `.ini` populated for runtime, but make `.sys.ini` a superset that contains *every* user-visible string the plugin ever shows. Yes, that means duplication. The handful of KB it costs is worth not chasing this gotcha twice.
+    Form::addFormPath(__DIR__ . '/../Form/forms');
+    $form->loadFile('menuitem', false);
+}
+```
+
+**Belt-and-braces:** still keep your installer/postflight strings in `.sys.ini` — the postflight runs in the installer context, where `.ini` is not loaded. So the `.sys.ini` superset pattern (every user-visible string lives in `.sys.ini`) is still useful for install-card copy, even though `loadLanguage()` covers the form-injection case.
+
+**Confirmed test:** `cs-menu-conditions` v0.1.0 first ship was missing the `loadLanguage()` call in `onContentPrepareForm`. Moving every label to `.sys.ini` did NOT fix the menu item edit screen (Joomla didn't load `.sys.ini` in that context either). Adding `$this->loadLanguage()` fixed it (2026-05-06).
 
 ---
 
