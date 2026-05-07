@@ -73,7 +73,7 @@ public function onContentPrepareForm(Event $event): void
 
 **Belt-and-braces:** still keep your installer/postflight strings in `.sys.ini` — the postflight runs in the installer context, where `.ini` is not loaded. So the `.sys.ini` superset pattern (every user-visible string lives in `.sys.ini`) is still useful for install-card copy, even though `loadLanguage()` covers the form-injection case.
 
-**Confirmed test:** `cs-menu-conditions` v0.1.0 first ship was missing the `loadLanguage()` call in `onContentPrepareForm`. Moving every label to `.sys.ini` did NOT fix the menu item edit screen (Joomla didn't load `.sys.ini` in that context either). Adding `$this->loadLanguage()` fixed it (2026-05-06).
+**Confirmed test:** `cs-menu-item-conditions` v0.1.0 first ship was missing the `loadLanguage()` call in `onContentPrepareForm`. Moving every label to `.sys.ini` did NOT fix the menu item edit screen (Joomla didn't load `.sys.ini` in that context either). Adding `$this->loadLanguage()` fixed it (2026-05-06).
 
 ---
 

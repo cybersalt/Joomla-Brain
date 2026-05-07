@@ -226,7 +226,7 @@ Avoid the temptation to keep one short string ("Dashboard") and concatenate the 
 
 ## 🎯 Pickers, Never IDs Typed by Hand
 
-**Source:** Tim Davis, suggested while building cs-menu-conditions (May 2026).
+**Source:** Tim Davis, suggested while building cs-menu-item-conditions (May 2026).
 
 **Pattern:** Whenever a Cybersalt extension's config form needs the user to identify Joomla entities — menu items, components, categories, articles, users, tags, modules, views — render a **picker dropdown**. Never make the user type raw IDs (`123, 456`), `option=...` element names, or `option.view` pairs by hand. The user shouldn't have to leave the form to look anything up.
 
@@ -235,7 +235,7 @@ The same rule applies to URL-pattern fields: prefer an operator selector (Contai
 1. **Single menu item** → `type="menuitem"` (works in plugin settings; do NOT use `modal_menu`, see UI-PATTERNS.md §11).
 2. **Multiple menu items** → `type="sql"` with `multiple="true"` + `layout="joomla.form.field.list-fancy-select"`. Query `#__menu` joined to `#__menu_types` so the dropdown groups by menu type.
 3. **Multiple components** → `type="sql" multiple="true" layout="joomla.form.field.list-fancy-select"` against `#__extensions WHERE type='component' AND enabled=1`.
-4. **Multiple component views** (`option.view` pairs) → custom `ListField` subclass that scans `components/com_*/src/View/*` (J4+ namespaced) and `components/com_*/views/*` (legacy MVC). There is no core field type for this — see `cs-menu-conditions/src/Field/ComponentViewsField.php` for a working example.
+4. **Multiple component views** (`option.view` pairs) → custom `ListField` subclass that scans `components/com_*/src/View/*` (J4+ namespaced) and `components/com_*/views/*` (legacy MVC). There is no core field type for this — see `cs-menu-item-conditions/src/Field/ComponentViewsField.php` for a working example.
 5. **Categories** → `type="categories"` for multi, `type="category"` for single.
 6. **Articles** → `type="sql"` with grouped query (UI-PATTERNS.md §11). `modal_article` silently fails in plugin settings.
 7. **Tags** → `type="tag" multiple="true"`.
@@ -243,7 +243,7 @@ The same rule applies to URL-pattern fields: prefer an operator selector (Contai
 
 **Why it matters:** "Comma-separated list of Itemids" is a UX disaster. Most site admins don't know what an Itemid is, and the ones who do still resent leaving the form to look up the values. Pickers do the lookup, prevent typos that fail silently, and make the form approachable for less-technical users (which is most of them). The operator-builder for URLs prevents the equivalent regex-knowledge tax — a Cybersalt extension shouldn't ship a field that 80% of admins can't fill in correctly.
 
-**Implementation pointer:** See `cs-menu-conditions` v0.1.x for a fully-worked example of all four patterns (sql multi-select for menu items + components, custom ListField for views, subform for URL rules with operator selectors). The `addfieldprefix="Cybersalt\Plugin\System\..."` attribute on the `<form>` root is what registers the custom field's namespace so `type="ComponentViews"` resolves.
+**Implementation pointer:** See `cs-menu-item-conditions` v0.1.x for a fully-worked example of all four patterns (sql multi-select for menu items + components, custom ListField for views, subform for URL rules with operator selectors). The `addfieldprefix="Cybersalt\Plugin\System\..."` attribute on the `<form>` root is what registers the custom field's namespace so `type="ComponentViews"` resolves.
 
 **Free-text input as a fallback alongside pickers is fine** when the picker can't enumerate every possibility (e.g. a hostname-pattern field that needs wildcards). Don't make it the only option.
 

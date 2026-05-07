@@ -14,7 +14,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-siteground-cache-for-joomla](https://github.com/cybersalt/cs-siteground-cache-for-joomla) | System Plugin | SiteGround cache integration, auto-purge, admin toolbar button, log viewer | Joomla 5 native (SubscriberInterface, com_ajax, custom fields, header injection) |
 | [cs-registration-redirect](https://github.com/cybersalt/cs-registration-redirect) (private) | System Plugin | Redirects users to a configurable URL after com_users registration completes — closes the gap that the per-menu-item-only stock redirect leaves | Joomla 4/5/6 native (SubscriberInterface, onAfterRoute, full update server) |
 | [cs-hikashop-login-redirect](https://github.com/cybersalt/cs-hikashop-login-redirect) (private) | System Plugin | Catches HikaShop's "404-instead-of-access-denied" response and redirects Guests to login with a `return=` parameter so they bounce back to the product after authenticating | Joomla 4/5/6 native (SubscriberInterface, **onError** hook, full update server) |
-| [cs-menu-conditions](https://github.com/cybersalt/cs-menu-conditions) (private) | System Plugin | Per-menu-item, per-page visibility — adds a Conditions tab to the menu item edit form (Itemid / component / option.view / URL regex) and strips matching `<li>` blocks in `onAfterRender` so hover handlers and embedded scripts (Turnstile, reCAPTCHA, etc.) never initialize on hidden items | Joomla 5/6 native (SubscriberInterface, `onContentPrepareForm` for `com_menus.item`, balanced-tag walker for nested submenus) |
+| [cs-menu-item-conditions](https://github.com/cybersalt/cs-menu-item-conditions) (private) | System Plugin | Per-menu-item, per-page visibility — adds a Conditions tab to the menu item edit form with **picker dropdowns** for menu items / components / views (no manual ID entry) and a **URL match builder** with operator selector (Contains/Equals/Begins/Ends/Regex). Strips matching `<li>` blocks in `onAfterRender` so hover handlers and embedded scripts (Turnstile, reCAPTCHA, etc.) never initialize on hidden items. v1.0.0 first stable release 2026-05-06. | Joomla 5/6 native (SubscriberInterface, `onContentPrepareForm` for `com_menus.item`, custom `ListField` for views, subform with operators for URL rules, balanced-tag walker for nested submenus) |
 
 ### Packages
 | Repo | Type | Description | Status |
@@ -59,7 +59,7 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-siteground-cache-for-joomla | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-registration-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-hikashop-login-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cs-menu-conditions | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-menu-item-conditions | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
