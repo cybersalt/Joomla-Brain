@@ -78,7 +78,13 @@ Listed here for completeness — every extension's `postflight()` should render 
 
 **Already documented in:** [[README.md]] → Language System Requirements.
 
-Every Cybersalt extension ships with translations for the 15 core PHP Web Design languages: en-GB, nl-NL, de-DE, es-ES, fr-FR, it-IT, pt-BR, ru-RU, pl-PL, ja-JP, zh-CN, tr-TR, el-GR, cs-CZ, sv-SE. Don't ship en-GB only and "add translations later" — translations later never happen.
+Every Cybersalt extension ships with translations for the **17** core Cybersalt-target languages: en-GB, nl-NL, de-DE, es-ES, fr-FR, it-IT, pt-BR, ru-RU, pl-PL, ja-JP, zh-CN, tr-TR, el-GR, cs-CZ, sv-SE, nb-NO, nn-NO. Don't ship en-GB only and "add translations later" — translations later never happen.
+
+> [!NOTE]
+> Norwegian Bokmål (nb-NO) and Nynorsk (nn-NO) were added to the canonical list 2026-05-06 while building cs-articles-module-maxxed v1.1.0 — partly because Norwegian is a Cybersalt-customer language, partly as a small tribute to Bjørn Ove Bremnes whose feature wish became that extension.
+
+> [!IMPORTANT]
+> **Timing exception — defer the 14 non-en-GB language files until the first *published* version, not during initial testing.** Reason: Tim test-loops new extensions by reinstalling the zip many times before the first real release; 28 extra files (`.ini` + `.sys.ini` per language × 14 languages) just slow that loop down without adding any value during the "does this even work" phase. Add them as part of the first tagged release, not the first build. Confirmed with Tim while building cs-articles-module-maxxed v1.0.0 (2026-05-06).
 
 ---
 
@@ -137,9 +143,9 @@ Every admin UI is tested with Joomla's dark template active before release. No h
 
 **Pattern:** Every extension should have a configurable "Support Contact" section in component options (or a parameter group for plugins/modules) that defines:
 
-1. **Support email** — where users can reach help
-2. **Support URL** — link to a contact form or knowledge base
-3. **Support label** — how to refer to support in messages (e.g., "Cybersalt support", "the development team")
+1. **Support email** — where users can reach help (default: `support@cybersalt.com`)
+2. **Support URL** — link to a contact form or knowledge base (default: `https://www.cybersalt.com/services/support-request-form` — this is the canonical Cybersalt support entry point; use it as the default `support_url` across **every** Cybersalt extension so a single page change downstream propagates to every extension's install card. Set on 2026-05-06.)
+3. **Support label** — how to refer to support in messages (default: `Cybersalt support`)
 
 Plus a **`SupportHelper` class** (or equivalent) that builds a consistent "please contact …" sentence used everywhere errors surface — API responses, error pages, denial messages, frontend cards. Never hardcode a generic "contact support" string.
 
