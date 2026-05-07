@@ -42,6 +42,25 @@ And both files must exist inside the plugin directory at `plugins/system/xxx/lan
 
 ---
 
+## 2b. Plugin field labels shown in OTHER edit screens MUST live in `.sys.ini`
+
+**Symptom:** the plugin's field labels render correctly on the plugin's own settings screen (System &rarr; Plugins &rarr; *Edit*), but the same constants render as raw `PLG_SYSTEM_XYZ_FIELD_FOO_LABEL` placeholders when the plugin injects fields into a *different* component's edit form. Common case: a system plugin that uses `onContentPrepareForm` to add a tab to `com_menus.item`, `com_content.article`, `com_modules.module`, etc. The fields appear, but the labels are constants.
+
+**Cause:** Joomla auto-loads a plugin's `.ini` file only when *the plugin itself is being rendered* (its own edit screen, or when the plugin runs at site/admin runtime). The Menu/Article/Module edit screens load `com_menus`/`com_content`/`com_modules` language, not the plugin's `.ini`. The `.sys.ini`, however, is loaded broadly by the installer and the Plugin Manager list, and is generally available across more contexts.
+
+**Fix:** duplicate every label/description constant from `.ini` into `.sys.ini`. The two files can have overlapping keys with no harm. Treat `.sys.ini` as the canonical home for any label that needs to render OUTSIDE the plugin's own settings page:
+
+- Field labels for the tab/fields you inject into another component's form.
+- Postflight install-card strings (the postflight context loads `.sys.ini`, not `.ini`).
+- The vendor-name / "support team" / generic boilerplate constants used in install card copy.
+- Anything shown by `Joomla\CMS\Plugin\PluginHelper::getPlugin('group', 'name')` callers in any context other than the plugin's own runtime.
+
+**Confirmed test:** `cs-menu-conditions` v0.1.0 first ship had Conditions-tab labels in `.ini` only. Labels rendered as `PLG_SYSTEM_CSMENUCONDITIONS_FIELD_*_LABEL` on the menu item edit screen even though the same plugin's own settings page rendered them correctly. Moving every label into `.sys.ini` fixed it (2026-05-06).
+
+**Easiest pattern (and the one cs-articles-module-maxxed and cs-menu-conditions use):** keep `.ini` populated for runtime, but make `.sys.ini` a superset that contains *every* user-visible string the plugin ever shows. Yes, that means duplication. The handful of KB it costs is worth not chasing this gotcha twice.
+
+---
+
 ## 3. INI file encoding: avoid em-dashes; use HTML entities
 
 Symptom: language keys are defined in the file, but Joomla's INI parser stops reading partway through, so every key defined AFTER the break shows as the raw key.
