@@ -74,16 +74,34 @@ Listed here for completeness — every extension's `postflight()` should render 
 
 ### Visual specification (locked-in pattern, 2026-05-06)
 
-The install card has a deliberate, branded look. These rules apply to every Cybersalt extension's postflight card so they're recognisable as a family in both light and dark Atum:
+The install card has a deliberate, branded look. These rules apply to every Cybersalt extension's postflight card so they're recognisable as a family in both light and dark Atum.
 
-1. **Header is its own surface — `background-color: #fff`** (always white) with a subtle bottom border. Don't inherit the template's card-cap background; that pulls the header dark in dark mode and the brand-coloured title becomes unreadable. The white header is an intentional callout *against* the surrounding admin chrome.
-2. **Extension logo at 56px, left of the title**, 1rem gap. Logo files install to `media/plg_*_<element>/` via a `<media folder="media" destination="plg_*_<element>">` block in the manifest; the card references them via `Uri::root() . 'media/...'`.
-3. **Title in Cybersalt cobalt `#0102E1`** — the primary brand colour from LOGO.md. Use cobalt because it (a) ties visually to the cobalt elements in every Cybersalt extension's logo, (b) reads beautifully on the white header in either mode, (c) is the "this is a Cybersalt thing" signal at a glance.
-4. **Action buttons in Cybersalt orange `#dc6b1a`** (the action-button orange from §12, NOT the brand orange `#FE9904` which is a logo accent — different role, different colour). All "go do something next" buttons (Open Plugin Settings, Open Menus, etc.) use the same orange so the eye knows where to click. White text on orange; underline tolerated. Specificity-bump the rules with `a.cs-cybersalt-btn` and `!important` on `color` since Joomla's admin link colour will otherwise win.
-5. **Footer line** below an `<hr>`: small text with the Plugin Settings button + vendor link + support URL. External links use `target="_blank" rel="noopener noreferrer"`.
-6. **Scope all CSS to `.cs-install-card`** — the postflight runs inside Joomla's installer frame; un-scoped styles would leak into the rest of admin.
+**Critical: the header is its own opinionated surface, but its colour scheme MUST switch with Joomla's mode.** A single fixed background (whether white or slate) breaks in one of the two modes — a white header reads as a glaring island against dark admin chrome, and a slate header looks dirty on a white admin page. The fix is a CSS-variable pattern keyed off Joomla's dark-mode selector:
 
-Reference implementation: cs-menu-item-conditions v1.1.x — see `plg_system_csmenuconditions/script.php`.
+```css
+.cs-install-card {
+    --cs-header-bg: #fff;
+    --cs-header-title: #0102E1;        /* Cybersalt cobalt — readable on white */
+    --cs-header-border: rgba(0, 0, 0, 0.1);
+}
+html[data-bs-theme="dark"] .cs-install-card,
+html[data-color-scheme="dark"] .cs-install-card {
+    --cs-header-bg: #1f2937;            /* slate-800 */
+    --cs-header-title: #FE9904;        /* brand orange — readable on slate */
+    --cs-header-border: rgba(255, 255, 255, 0.1);
+}
+```
+
+Joomla 5/6 uses BOTH `data-bs-theme="dark"` and `data-color-scheme="dark"` depending on template/version; match both. Light mode = white header + cobalt title (the primary brand colour from LOGO.md). Dark mode = slate header + brand orange title (cobalt would be unreadable on slate). The logo's cobalt + orange echoes both schemes naturally.
+
+Other rules:
+
+1. **Extension logo at 56px**, left of the title, 1rem gap. Logo files install to `media/plg_*_<element>/` via a `<media folder="media" destination="plg_*_<element>">` block in the manifest; the card references them via `Uri::root() . 'media/...'`.
+2. **Action buttons in Cybersalt orange `#dc6b1a`** (the action-button orange from §12, NOT the brand orange `#FE9904` which is a logo accent — different role, different colour). All "go do something next" buttons (Open Plugin Settings, Open Menus, etc.) use the same orange so the eye knows where to click. White text on orange; underline tolerated. Specificity-bump the rules with `a.cs-cybersalt-btn` and `!important` on `color` since Joomla's admin link colour will otherwise win.
+3. **Footer line** below an `<hr>`: small text with the Plugin Settings button + vendor link + support URL. External links use `target="_blank" rel="noopener noreferrer"`.
+4. **Scope all CSS to `.cs-install-card`** — the postflight runs inside Joomla's installer frame; un-scoped styles would leak into the rest of admin.
+
+Reference implementation: cs-menu-item-conditions v1.1.x — see `plg_system_csmenuconditions/script.php`. Confirmed-test failure mode: shipping a fixed-colour header (light or dark) and discovering the other mode looks broken — happened twice on cs-menu-item-conditions before the CSS-variable pattern landed.
 
 ---
 
