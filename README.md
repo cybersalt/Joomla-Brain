@@ -54,6 +54,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 
 ### Build & Packaging
 - `PACKAGE-BUILD-NOTES.md`: Package naming, 7-Zip requirement, common errors
+- `CPANEL-API-NOTES.md`: Pushing in-development extension files directly to a cPanel-hosted staging Joomla via UAPI — when to use vs ZIP install, `Fileman::upload_files` (multipart) vs `Fileman::save_file_content` (AdminBin buffer trap), the relative-path-only gotcha (absolute `/home/<user>/...` is silently sandboxed), OPcache invalidation
 - `build-package.bat` / `build-package.ps1` / `build-simple.ps1`: Build scripts
 - `check-encoding.ps1` / `convert-utf8.ps1`: File encoding utilities
 - `validate-package.ps1`: Package validation
