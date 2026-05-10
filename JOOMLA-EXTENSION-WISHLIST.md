@@ -206,21 +206,31 @@ Add a `<fieldset name="support">` to `config.xml` with the three fields. Use `Su
 
 ---
 
-## 🔍 Filter Every Column That's Worth Filtering
+## 🔍 Filter Every Column That's Displayed
 
-**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
+**Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026); promoted to a hard rule while building cs-image-sentinel (May 2026) after another list view shipped without per-column coverage.
 
-**Pattern:** When a list view has columns like Status, Package, Type, Result, etc., every one of those enumerated columns should have a corresponding filter in the filter bar (or filter row above the table). If a user can see a column and it has a finite set of values, they should be able to filter to just that value.
+**The rule:** every column shown in an admin list view gets a corresponding filter in the searchtools filter bar. "Search box + status dropdown" is not enough. If the operator can see a column, the operator can slice by it in one click. List views that do not satisfy this are considered incomplete and should not ship.
 
-1. **Enumerated columns** (status, type, category, result) → dropdown filter populated from existing values in the data (so empty options aren't shown).
-2. **Free-text columns** (domain, email, name) → covered by the global search box, but optionally given a dedicated text filter when the list is large.
-3. **Date columns** (created, last_check, release_date) → date range filter (today, yesterday, last 7 days, last 28 days, custom range).
-4. **Boolean columns** (is_latest, is_stable, is_published) → simple Yes/No filter.
-5. **Foreign key columns** (package, category, author) → dropdown of available parent items.
+**By column type:**
 
-The goal: if a user looks at the list and asks "show me only the X ones" the answer is always one click away.
+1. **Enumerated columns** (status, type, category, result) → dropdown filter populated from the data's actual values (empty options not shown).
+2. **Free-text columns** (domain, email, name, path) → text filter on the column. The global search box covers many text columns at once but does NOT count as the per-column filter for this rule.
+3. **Date columns** (created, last_check, release_date) → date range with two `calendar` fields (`<col>_from` and `<col>_to`), plus optional preset shortcuts (today, yesterday, last 7/28 days, custom range).
+4. **Boolean columns** (is_latest, is_stable, is_published, is_orphan) → Yes/No dropdown.
+5. **Foreign key columns** (package, category, author, folder_id) → SQL-backed picker dropdown.
+6. **Numeric / id columns** → either an exact-match text input or a min/max pair if range queries are useful.
 
-**Why it matters:** Lists with limited filtering force users to scan visually or learn unintuitive search syntax. A filter per filterable column means the user's mental model ("I want to see only X") matches the UI directly. Especially important for extensions where buyers/admins are looking at potentially hundreds of rows.
+**Wiring checklist** (skipping any of these breaks the filter silently):
+
+- [ ] `<field>` added to `forms/filter_<view>.xml` under `<fields name="filter">`
+- [ ] State key added to `filter_fields` in the `ListModel` constructor
+- [ ] Filter applied in `getListQuery()` reading from `$this->getState('filter.<key>')`
+- [ ] State key contributes to `getStoreId()` so the cache invalidates when the filter changes (Brain gotcha #17)
+- [ ] Language constant added for the field label and any hint
+- [ ] If date-range, both ends bound and either-end-empty handled
+
+**Why it matters:** Lists with limited filtering force users to scan visually or learn search syntax. A filter per displayed column means the user's mental model ("I want to see only X") matches the UI directly. Especially important for extensions where buyers/admins are looking at potentially thousands of rows.
 
 **Implementation pointer:** Joomla 5's filter bar pattern (see `JOOMLA5-LIST-FILTERS-GUIDE.md`). For dynamic dropdowns populated from data, use a custom form field type that queries `DISTINCT column FROM table` (see cs-download-id-manager's `EventtypeField` and `ResulttypeField`). For date ranges, a `<select>` with preset ranges (today/yesterday/7days/28days) plus a "Custom…" option that reveals from/to date pickers is the cleanest UX.
 
@@ -314,6 +324,31 @@ Apply this consistently to **every** Yes/No field across admin and frontend.
 ```
 
 **Caveat:** Joomla's exact rendering differs between J3, J4, and J5. Test in dark mode too. The simplest robust approach is to inspect a rendered Yes/No field on a real install and adjust the selectors accordingly. Document the working CSS in [[JOOMLA5-UI-PATTERNS.md]] once stable.
+
+---
+
+## ❓ Inline-Help Toggle on Every Form
+
+**Source:** Tim Davis, suggested while building cs-image-sentinel (May 2026).
+
+**Pattern:** Every admin **edit form and config dialog** in a Cybersalt extension ships the inline-help toggle button in its toolbar. Operators click it to switch each field's `description` attribute from tooltip rendering to a paragraph rendered directly under the field, and click again to revert.
+
+```php
+protected function addToolbar(): void
+{
+    ToolbarHelper::title(...);
+    ToolbarHelper::apply('item.apply');
+    ToolbarHelper::save('item.save');
+    ToolbarHelper::cancel('item.cancel', 'JTOOLBAR_CLOSE');
+    ToolbarHelper::inlinehelp();   // ← this line
+}
+```
+
+**Why it matters:** Tooltips force the operator to hover-and-wait per field, can't be copy-pasted, are hostile to touch devices, and are easy to dismiss accidentally. Inline help renders the descriptions as part of the form so the operator can read once, plan, and fill the form linearly. The button label is built-in ("Toggle Inline Help") and Joomla's CSS handles the rendering switch — the only failure mode is forgetting to add the button.
+
+**Implementation pointer:** `\Joomla\CMS\Toolbar\ToolbarHelper::inlinehelp()` requires no controller method, no language string, and no view-side rendering changes. The component-options dialog (Component → Options) already includes the toggle automatically — this rule applies to the component's own edit forms, plugin settings (when those are rendered as a form), and any custom config dialogs.
+
+List views generally don't have field descriptions, so the toggle is unnecessary on `View\<Items>\HtmlView.php`. The rule applies to forms, not lists.
 
 ---
 
