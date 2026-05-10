@@ -325,6 +325,127 @@ For multi-value filters (arrays) use `serialize()` so the hash key is determinis
 
 ---
 
+## 18. `DatabaseQuery::bind()` takes its `$value` parameter by reference
+
+`Joomla\Database\DatabaseQuery::bind(string $name, mixed &$value, int $dataType = ParameterType::STRING)` declares its second parameter as a **reference**. PHP refuses to bind a reference to anything that isn't a real variable, and the failure is a fatal at execute time:
+
+```
+Joomla\Database\DatabaseQuery::bind(): Argument #2 ($value) could not be passed by reference
+```
+
+Anything that isn't a plain variable triggers it:
+
+```php
+// WRONG — every line below fatals at execute time
+$query->bind(':state', 'running');                                   // string literal
+$query->bind(':id', 5);                                              // int literal
+$query->bind(':base', basename($path));                              // function call result
+$query->bind(':name', $obj->getName());                              // method call result
+$query->bind(':orphan', $hits === 0 ? 1 : 0, ParameterType::INTEGER); // ternary
+$query->bind(':like', '%' . $db->escape($q, true) . '%');            // concatenation
+$query->bind(':type', SOMECONST);                                    // constant
+$query->bind(':id', (int) $rawId);                                   // cast result
+
+// CORRECT — assign to a real variable first
+$state = 'running';
+$query->bind(':state', $state);
+
+$base = basename($path);
+$query->bind(':base', $base);
+
+$orphan = $hits === 0 ? 1 : 0;
+$query->bind(':orphan', $orphan, ParameterType::INTEGER);
+```
+
+What's safe without a temporary variable: plain variables (`$x`), property access on stdClass loaded from the DB (`$row->id`), and array-element access (`$row['id']`, `$arr[$i]`) — those all yield assignable references.
+
+### Bind-in-loop trap (related)
+
+`bind()` stores the **reference**, not the value. If you reuse a single loop variable, every parameter ends up pointing at whatever it held in the last iteration:
+
+```php
+// WRONG — all :c0..:cN end up bound to the LAST $like value
+foreach ($candidates as $i => $cand) {
+    $like = '%' . $db->escape($cand, true) . '%';
+    $query->bind(':c' . $i, $like);
+}
+
+// CORRECT — distinct array slot per iteration
+$likes = [];
+foreach ($candidates as $i => $cand) {
+    $likes[$i] = '%' . $db->escape($cand, true) . '%';
+    $query->bind(':c' . $i, $likes[$i]);
+}
+```
+
+The query "doesn't fatal but returns wrong rows" is the symptom — easy to misdiagnose as a SQL bug. Discovered while building cs-image-sentinel's reference finder.
+
+---
+
+## 19. UTF-8 BOM in `.php` files breaks the autoloader
+
+PHP refuses to tokenise any byte that lands before `<?php`. A UTF-8 byte-order mark (`0xEF 0xBB 0xBF`) is exactly that — three "invisible" bytes of output ahead of the open tag. The fatal it produces is misleading:
+
+```
+Symfony\Component\ErrorHandler\Error\FatalError
+in /…/com_yourext/src/Extension/YourExtComponent.php (line 9)
+```
+
+…where line 9 is the `namespace` declaration. The actual root cause is the BOM at offset 0; the line number is whatever the tokenizer happens to land on after the failure.
+
+Symptoms:
+
+- Component or plugin throws a 500 immediately on the first hit after install
+- Error points at a `namespace` line, a `use` statement, or a class declaration that is syntactically valid
+- The error message is a generic `FatalError` with no underlying explanation in the "Show exception properties" panel
+- Stripping any BOM-bearing file with `dos2unix` / re-saving as "UTF-8 (no BOM)" makes the error vanish
+
+Where they come from:
+
+- VSCode / Notepad++ "Save with BOM" defaults
+- PowerShell 5.1's `Out-File` and `Set-Content` default encoding
+- Linter or formatter passes that re-write the file with BOM
+- Some IDE auto-format-on-save settings
+
+### One-shot bulk strip (PowerShell)
+
+Run from the repo root before building the ZIP:
+
+```powershell
+$exts = @("*.php","*.ini","*.xml","*.sql","*.json","*.css","*.js","*.md","*.html","*.ps1")
+$stripped = 0
+Get-ChildItem -Path . -Recurse -File -Include $exts | ForEach-Object {
+    $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        $newBytes = New-Object byte[] ($bytes.Length - 3)
+        [Array]::Copy($bytes, 3, $newBytes, 0, $newBytes.Length)
+        [System.IO.File]::WriteAllBytes($_.FullName, $newBytes)
+        $stripped++
+    }
+}
+"BOM stripped from $stripped files."
+```
+
+### Detect from one file
+
+```powershell
+$bytes = [System.IO.File]::ReadAllBytes($file)
+"{0:X2} {1:X2} {2:X2}" -f $bytes[0], $bytes[1], $bytes[2]
+# "EF BB BF" ⇒ has BOM
+```
+
+### Prevention
+
+- **PowerShell**: pass `-Encoding utf8NoBom` to `Out-File` / `Set-Content` when writing files programmatically. Default encoding in 5.1 is the wrong one.
+- **VSCode**: set `"files.encoding": "utf8"` (NOT `"utf8bom"`) in workspace `.vscode/settings.json`.
+- **Editor pre-commit hook**: many teams add a check that fails if any tracked file starts with `EF BB BF`.
+
+This isn't Joomla-specific (the same issue affects any PHP project), but Joomla extensions are particularly prone to hitting it because the install pipeline copies many files at once and the first one PHP autoloads is whichever class the request needs — so the failure surfaces at runtime, far from where it would be obvious during development.
+
+Discovered while building cs-image-sentinel: 96 of 126 source files were BOM-tainted by the editor's auto-format pass after the initial commit.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
