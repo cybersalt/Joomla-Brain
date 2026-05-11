@@ -132,6 +132,52 @@ The plain `Event` base just stores arguments in an array and stays out of the wa
 
 ---
 
+## 6b. Postflight scripts — no `Joomla\CMS\Filesystem\File` (or any `Joomla\CMS\Filesystem\*`) on Joomla 6
+
+The whole `Joomla\CMS\Filesystem\*` namespace was deprecated in Joomla 4 and **removed in Joomla 6**. On J5 the shim is still there and `File::delete()`, `Folder::create()` etc. work. On J6 they throw `Class not found`. This bit cs-mcp-for-j v1.6.x–v1.7.2: postflight clearing the autoload cache with one `File::delete()` call worked on J5 but blew up on J6.
+
+The trap is *worse* than a plain crash because most postflight scripts wrap the work in try/catch (so an install error surfaces as a warning instead of breaking the install). In cs-mcp-for-j's case the same try/catch ALSO covered the immediately-following `enableBundledPlugins()` step. Net effect on every J6 site:
+
+- The `File::delete()` call threw `Class not found`
+- The catch surfaced a yellow warning ("postflight setup failed: …")
+- **The plugin-enabling step was skipped** because the throw bailed out of the try block before reaching it
+- Postflight returned `true` (we don't abort the install)
+- The user saw a working install with a warning that flashed by
+- The Web Services plugin stayed *disabled* → MCP route 404'd → site looked broken with no obvious cause
+
+**Rule:** in any installer script targeting J5 *and* J6, **never** use `Joomla\CMS\Filesystem\*`. Use plain PHP (`unlink`, `mkdir`, `file_get_contents`, `file_put_contents`, `rename`, `copy`) — they work on every PHP version and don't depend on any Joomla shim. If you genuinely need Joomla's Filesystem package (e.g. for FTP-mode operations), pull `Joomla\Filesystem\File` from the `joomla-filesystem` package as a Composer dep — but for postflight scripts, plain PHP is the right answer.
+
+Defensive pattern for try/catch in postflight: **don't bundle independent steps into one try block.** If clearing the autoload cache and enabling the bundled plugins are independent, give each its own try/catch so one failure doesn't take the other down.
+
+```php
+public function postflight(string $type, InstallerAdapter $adapter): bool
+{
+    if (!in_array($type, ['install', 'update', 'discover_install'], true)) {
+        return true;
+    }
+
+    try { $this->clearAutoloadCache(); } catch (\Throwable $e) {
+        Factory::getApplication()->enqueueMessage('autoload cache clear failed: ' . $e->getMessage(), 'warning');
+    }
+    try { $this->enableBundledPlugins(); } catch (\Throwable $e) {
+        Factory::getApplication()->enqueueMessage('plugin enable failed: ' . $e->getMessage(), 'warning');
+    }
+    $this->showPostInstallMessage($type);
+    return true;
+}
+
+private function clearAutoloadCache(): void
+{
+    $cacheFile = JPATH_ADMINISTRATOR . '/cache/autoload_psr4.php';
+    if (is_file($cacheFile)) {
+        @unlink($cacheFile);                // ✅ plain PHP
+        // File::delete($cacheFile);        // ❌ J5-only, dies on J6
+    }
+}
+```
+
+---
+
 ## 7. Tool registration via custom event
 
 Make tool registration extensible from day one — even if you only ship built-in tools at first. Other plugins (yours and third parties') subscribe to the registration event and add their tools to the registry:
