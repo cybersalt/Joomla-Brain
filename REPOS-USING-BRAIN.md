@@ -20,6 +20,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | Repo | Type | Description | Status |
 |------|------|-------------|--------|
 | [cs-continuous-learning](https://github.com/cybersalt/cs-continuous-learning) | Package | Continuous learning system — topics, article tagging, custom fields | Joomla 5 native (component + 2 plugins) |
+| [cs-cron-master](https://github.com/cybersalt/cs-cron-master) (private) | Package (com + plg_system) | Generic cron-job manager with pluggable handlers. Drop a `HandlerInterface` class in `admin/src/Handler/` and the registry auto-discovers it. Three trigger modes per job (manual / front-dispatch / system-cron). First handler bundled: RSTickets! Pro IMAP/POP3 polling — clean-room replacement for RSJoomla's `plg_system_rsticketsprocron`. v1.0.0 released 2026-05-23. | Joomla 5/6 native (admin component, system plugin, J5/6 CLI app, BootableExtensionInterface, SubscriberInterface, custom HandlerListField + JobListField pickers, Diagnostics view for handler deps, every-column filter coverage, dark-mode safe) |
 | [StageIt-5](https://github.com/cybersalt/StageIt-5) | Package | Environment banner system | Joomla 5 (legacy plugin format) |
 | [StageIt-6](https://github.com/cybersalt/StageIt-6) | Package | Environment banner system | Joomla 6 (legacy plugin format) |
 

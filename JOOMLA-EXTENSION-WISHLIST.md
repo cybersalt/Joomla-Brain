@@ -127,6 +127,33 @@ Every extension passes a `security-review` skill run with **zero HIGH or MEDIUM 
 
 ---
 
+## 🟢 Only Support Actively-Maintained Joomla Versions
+
+**Source:** Tim Davis, established 2026-05-23 while spec'ing cs-cron-master.
+
+**Pattern:** New Cybersalt extensions target **only the Joomla versions that are currently in active support** — at the time of writing that's **Joomla 5.x and Joomla 6.x**. Joomla 4.x dropped to security-only in October 2025 and out of LTS in October 2026; treat it as legacy. Joomla 3 is end-of-life. Existing extensions that already shipped for older Joomla versions don't have to drop support on their next minor release, but **every new extension starts at the current support floor**.
+
+**What this means in practice:**
+
+1. **Manifest `<targetplatform>`:** `<targetplatform name="joomla" version="5\.[0-9]+|6\.[0-9]+" />` — never include `4\.` in a new extension's regex.
+2. **Required PHP minimum tracks the lowest currently-supported Joomla.** J5 requires PHP 8.1+, so that's the floor for new extensions.
+3. **Use modern patterns unconditionally** — namespaced layout, `services/provider.php`, `BootableExtensionInterface`, `SubscriberInterface`, `AbstractModuleDispatcher`, J5/6 CLI app. No legacy compatibility shims. No "if J4 then …" branches.
+4. **README and `.sys.ini` description explicitly state J5/6 only.** Don't leave it ambiguous; J4 users reading the listing will assume "it'll probably work" and file support tickets when it doesn't.
+5. **Update-server `<targetplatform>`** in `updates.xml` also matches the same J5/6 regex. Don't let Joomla 4 sites silently auto-update to a release that won't run.
+
+**Why it matters:** Cybersalt manages a fleet of sites. Maintaining a dual-target codebase (J4 + J5/6 in the same extension) doubles the test matrix, doubles the bug surface, and means modern Joomla patterns (DI, named events, `SubscriberInterface`) get watered down to the lowest common denominator. Once Joomla project itself stops actively supporting a version, Cybersalt does too.
+
+**Exceptions:** If a specific paying client needs an extension targeted at the legacy version they're stuck on, that's a one-off contract; build it on a branch, don't pollute the main repo's manifest with it.
+
+**Implementation pointer:** When in doubt, check https://www.joomla.org/announcements/release-news/ and the joomla.org-current-supported-versions page for the active support floor. Don't go from memory — the floor moves.
+
+**Examples in the wild:**
+
+- cs-cron-master v1.0.0 — J5/6 native, manifest regex `5\.[0-9]+|6\.[0-9]+`, no J4 manifest variant. (Established this rule.)
+- cs-template-integrity, cs-menu-item-conditions, cs-registration-redirect — all post-2026 J5/6 native.
+
+---
+
 ## 📝 Changelog (Markdown + HTML, Kept In Sync)
 
 **Already documented in:** [[README.md]] → Changelog Format + [[VERSION-BUMP-CHECKLIST.md]].
