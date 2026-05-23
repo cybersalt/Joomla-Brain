@@ -446,6 +446,144 @@ Discovered while building cs-image-sentinel: 96 of 126 source files were BOM-tai
 
 ---
 
+## 20. Media field stores `path#joomlaImage://adapter/path?w=&h=` — strip everything from `#` onwards
+
+When you read a media-field value back from `params`, you get the path with a fragment appended for the media manager's internal preview/transform metadata. Example:
+
+```
+images/design.jpg#joomlaImage://local-images/design.jpg?width=1248&height=667
+```
+
+The **real repo-relative path is the part before the `#`**. Everything after is adapter+transform noise that's irrelevant to filesystem operations. If you don't strip it, `is_file()`/`file_exists()` will fail because no such path exists on disk.
+
+Robust normalization for any code that needs to use a media-field value as a filesystem path:
+
+```php
+$path = (string) $params->get('placeholder_image', '');
+// 1. Strip the hash fragment (joomlaImage:// adapter metadata)
+if (str_contains($path, '#')) {
+    $path = substr($path, 0, strpos($path, '#'));
+}
+// 2. Strip any legacy colon-form adapter prefix (local-images:foo/bar.png)
+if (str_contains($path, ':')) {
+    $path = substr($path, strpos($path, ':') + 1);
+}
+// 3. Strip any legacy slash-form adapter prefix (local-images/foo/bar.png)
+$path = preg_replace('#^local-[^/]+/#', '', $path);
+// 4. Strip any query string
+if (str_contains($path, '?')) {
+    $path = substr($path, 0, strpos($path, '?'));
+}
+$path = trim($path, '/');
+```
+
+Discovered while building cs-image-sentinel: a "placeholder image" media-field value that looked fine in the Joomla Options UI was failing `is_file()` because the stored DB value had the `#joomlaImage://...?width=...&height=...` fragment appended. The earlier attempt to strip only the colon-form prefix produced a path like `local-images/design.jpg?width=1248&height=667` — still not on disk.
+
+---
+
+## 21. Joomla 5 quickstart installer (`custom.sql`) — the four-layer corruption chain
+
+The Joomla 5 web installer loads SQL in a fixed order:
+
+1. `installation/sql/mysql/base.sql` — creates core tables + seeds them with default rows (sample categories, modules, menu items, template_styles, usergroups, viewlevels, schemas, extensions).
+2. `installation/sql/mysql/supports.sql` — Joomla framework support tables.
+3. `installation/sql/mysql/<lang>/sample_<flavor>.sql` — the sample-data flavor the user picked (blog, brochure, default, etc.).
+4. `installation/sql/mysql/custom.sql` — **optional**, loads last. This is the slot template vendors use to deliver a "quickstart" (donor site DB dump pre-converted to layer 4 SQL).
+
+Producing a working `custom.sql` from a real donor `mysqldump` is harder than it looks. The pre-seeded core rows from step 1 collide with donor rows from step 4 in four distinct ways. Solving one layer often reveals the next; we hit all four in succession building the Avant J5.4.5 quickstart 2026-05-22 → 2026-05-23.
+
+### Layer 1: base-install row collisions in structural tables → `INSERT INTO` PK conflicts
+
+The wizard's stock data + the donor's data both populated `#__assets` / `#__usergroups` / `#__viewlevels` / `#__template_styles` / `#__modules` / `#__modules_menu` / `#__menu` / `#__menu_types` / `#__categories` / `#__content` with **non-overlapping primary keys**. Donor `INSERT INTO` raised duplicate-PK errors *or* (after switching to `REPLACE INTO`) left the stock rows alongside the donor rows because REPLACE only replaces by PK match — non-PK-overlapping rows survive. Result: dual home-page styles published at once, broken nested-set trees in `#__assets`, ACL chaos, and a "Component not found" error on the first dashboard click after install.
+
+**Fix:** convert all donor `INSERT INTO` → `REPLACE INTO` AND `TRUNCATE` the 10 structural tables at the top of `custom.sql` (after any `ALTER TABLE` schema-prep statements, before the donor `REPLACE INTO` statements). The `TRUNCATE` wipes the wizard's seed rows so the donor data lands on a clean slate.
+
+```sql
+-- ============================================================
+-- TRUNCATE structural tables before donor REPLACE INTO loads them.
+-- Fixes Layer 1: base-install row collisions for structural tables.
+-- ============================================================
+TRUNCATE TABLE `#__assets`;
+TRUNCATE TABLE `#__usergroups`;
+TRUNCATE TABLE `#__viewlevels`;
+TRUNCATE TABLE `#__template_styles`;
+TRUNCATE TABLE `#__modules`;
+TRUNCATE TABLE `#__modules_menu`;
+TRUNCATE TABLE `#__menu`;
+TRUNCATE TABLE `#__menu_types`;
+TRUNCATE TABLE `#__categories`;
+TRUNCATE TABLE `#__content`;
+```
+
+### Layer 2: `_extensions` schema drift between donor and target → `state=NULL` everywhere → "Component not found"
+
+`_extensions` schema in different Joomla 5 minor versions has the same columns in **different orders**. J5.1.x has `locked` at column position 20 (last); J5.4.5 has `locked` at column position 12. A `mysqldump` without `--complete-insert` emits **positional** `VALUES (...)` — every column from `locked` onward shifts when the target schema differs from the donor. `state` ends up populated with what was supposed to be `note`; `note` ends up populated with what was supposed to be `state`; `params` ends up populated with what was supposed to be something else.
+
+Joomla's component dispatcher does `WHERE state=0 AND enabled=1` on `_extensions` — with `state=NULL`, that filter never matches → "Component not found" on every dashboard click. Diagnostic SQL on the broken install: 328 of 516 extensions had `state=NULL` (vs 6 in donor).
+
+**Fix:** add `--complete-insert` to `mysqldump`. MySQL then names each column in every `INSERT/REPLACE`:
+
+```sql
+REPLACE INTO `#__extensions` (`extension_id`, `package_id`, `name`, …, `locked`, `manifest_cache`, …)
+VALUES (22, 0, 'com_content', …, 0, '{"…"}', …);
+```
+
+— the target maps by **name** instead of position, and schema drift becomes harmless.
+
+### Layer 3: `--skip-add-locks` removes the `LOCK TABLES` markers your strip-filter depends on
+
+The standard donor → custom.sql transformer (any awk/sed/PHP script that processes a `mysqldump`) typically uses the `LOCK TABLES \`<prefix><table>\` WRITE;` lines as **table boundaries** — it needs to know which table each `INSERT` belongs to so it can apply per-table rules (strip user/session/order-history data, keep product-catalog data, etc.). 
+
+`mysqldump` ships LOCK TABLES wrappers by default. **`--skip-add-locks` removes them.** Easy to add by accident if you're thinking "we don't need LOCK wrappers in a single-file SQL replay." The cost: your strip filter sees a stream of `INSERT INTO` without ever knowing which table it's in, so STRIP_DATA never fires, so rows you intended to drop (e.g. the `_schemas` row `(700, '5.4.0-2025-08-02')` that conflicts with the wizard's identical seed) get carried into custom.sql → duplicate-key error mid-install.
+
+**Confusing pair to keep straight:**
+- `--skip-add-locks` → **removes** `LOCK TABLES \`<table>\` WRITE; ... UNLOCK TABLES;` wrappers from the dump output. **Don't use** if your transformer depends on them.
+- `--skip-lock-tables` → tells mysqldump not to issue `LOCK TABLES ... READ` for **runtime locking during the dump** (read-consistency, blocks writes). Safe and recommended on a live donor where you don't want to block traffic. Does **not** affect dump output.
+
+**Fix:** drop `--skip-add-locks`. Keep `--skip-lock-tables` if you don't want the dump to block live writes.
+
+### Layer 4: `set -e` bash + `grep -c` returning 0 → script aborts on a *desired* outcome
+
+Many quickstart-build scripts validate the strip-result with lines like:
+
+```bash
+S=$(grep -c "REPLACE INTO .#__schemas" custom.sql)
+echo "  _schemas REPLACE: $S (should be 0)"
+```
+
+When the strip worked correctly and `$S` should be `0`, `grep -c` exits with status **1** (which means "no matches"). Under `set -e`, the script aborts mid-build on what is actually the success case.
+
+**Fix:** append `|| true` to every diagnostic `grep -c`:
+
+```bash
+S=$(grep -c "REPLACE INTO .#__schemas" custom.sql || true)
+```
+
+The count still lands in `$S`; the `|| true` swallows the exit-1, `set -e` stays happy.
+
+### Final correct mysqldump flags for a J5 quickstart custom.sql
+
+```bash
+mysqldump \
+  -u "$DUSER" "$DDB" \
+  --complete-insert \        # Layer 2: name columns in every INSERT
+  --default-character-set=utf8mb4 \
+  --no-tablespaces \
+  --skip-lock-tables \       # OK: only skips runtime locking
+  --skip-comments \
+  > raw.sql
+# --add-locks is the DEFAULT and MUST stay default. LOCK TABLES markers in the
+# output stay where they are. Never add --skip-add-locks. (Layer 3.)
+```
+
+### Why this matters across the Cybersalt brands
+
+The same pipeline produces quickstarts for any of Tim's theme-selling brands (VirtueMart Templates, Easy Templates, BasicJoomla). The four layers above are donor-data-shape-agnostic — they bite any team that's building from a real Joomla DB dump rather than hand-curating sample data. The complete recipe + reusable build script are captured in the vault's [Build a Joomla 5 Quickstart Install Package](https://e.onedrive.com/) skill — see the 2026-05-23 Avant v10→v14 entry.
+
+Locked in 2026-05-23 after the four-version Avant quickstart rebuild loop cracked the chain.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)

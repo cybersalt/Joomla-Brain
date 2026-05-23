@@ -23,6 +23,16 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.4.0 — 2026-05-23
+
+Adds a new gotcha section (#21) to `JOOMLA5-COMMON-GOTCHAS.md` documenting the four-layer corruption chain that bites anyone building a Joomla 5 quickstart `custom.sql` from a real donor `mysqldump`. Hard-won from the Avant J5.4.5 quickstart rebuild loop (v10 → v14) on 2026-05-22 / 2026-05-23 — each version surfaced one new layer before the chain finally collapsed and v13 installed cleanly.
+
+### 🚀 New
+
+- **2026-05-23** — `JOOMLA5-COMMON-GOTCHAS.md` § 21: *Joomla 5 quickstart installer (`custom.sql`) — the four-layer corruption chain.* Documents Layer 1 (base-install row collisions in structural tables: TRUNCATE before donor REPLACE INTO), Layer 2 (`_extensions` schema drift between J5 minor versions: use `--complete-insert` so MySQL maps by column name), Layer 3 (`--skip-add-locks` removes LOCK TABLES markers that strip-filters depend on: keep `--add-locks` default), and Layer 4 (`set -e` bash + `grep -c` returning 0 aborts scripts on success: append `|| true` to diagnostic grep -c). Includes the final correct `mysqldump` flag set and the canonical TRUNCATE block for the 10 structural tables.
+
+---
+
 ## v1.3.0 — 2026-04-29
 
 Adds a new cross-cutting "wishlist" guide for UX/operational expectations that apply to every Cybersalt Joomla extension regardless of type.
