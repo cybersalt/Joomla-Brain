@@ -584,6 +584,55 @@ Locked in 2026-05-23 after the four-version Avant quickstart rebuild loop cracke
 
 ---
 
+## 22. Empty `<schemapath>` folder → `Folder::files: Path is not a folder` install error
+
+When your component manifest declares an update path:
+
+```xml
+<update>
+    <schemas>
+        <schemapath type="mysql">sql/updates/mysql</schemapath>
+    </schemas>
+</update>
+```
+
+Joomla's installer enumerates files in that directory via `\Joomla\Filesystem\Folder::files()` and runs the schema-version tracker against them. If the directory ships **empty** (which is natural for a v1.0.0 release — there's nothing to migrate from yet), the install aborts with:
+
+```
+Joomla\Filesystem\Folder::files: Path is not a folder.
+Path: [ROOT]/administrator/components/com_cscronmaster/sql/updates/mysql
+```
+
+**The folder DOES get created on disk** (Joomla's installer copies the directory entry from the ZIP). The error message is misleading — it's not really saying "path doesn't exist", it's saying "path enumerates to zero readable files and that's not allowed in this context." In older Joomla versions this would emit a warning and continue; in Joomla 5.x+ it's a fatal install error.
+
+**Fix:** ship at least one no-op SQL file matching your v1.0.0 manifest version. The schema-version tracker will create a row with `version_id = '1.0.0'` so future migrations (e.g. `1.1.0.sql` adding a column) can be applied incrementally:
+
+```
+admin/sql/updates/mysql/1.0.0.sql:
+
+-- v1.0.0 baseline migration.
+-- Initial schema is created by sql/install.mysql.utf8.sql on first install;
+-- this empty migration exists so Joomla's schema-version tracker has a 1.0.0
+-- row to anchor future migrations against.
+SELECT 1;
+```
+
+A `SELECT 1;` no-op is enough — Joomla doesn't care what the SQL does, only that the file is there.
+
+**Same class of bug:** ANY empty directory shipped in the ZIP whose path is referenced by Joomla's installer or framework code (template `media/css`, `media/js`, schema paths, language folders) is a latent error. Empty directories with `D....` markers in the ZIP do install as empty folders on disk — they just blow up the first time framework code tries to enumerate them. **Rule of thumb:** if you have an empty directory in your component scaffold whose purpose is "this is where X files will eventually live," drop a placeholder file in it (or a `.gitkeep` won't survive Joomla's filename filters — use a real `1.0.0.sql` / `placeholder.txt` / etc.).
+
+**Diagnostic check for your build script:** before zipping, scan the staging tree for empty directories and either drop placeholders or remove them:
+
+```powershell
+Get-ChildItem -Path $stage -Recurse -Directory | Where-Object {
+    @(Get-ChildItem -Path $_.FullName -Recurse -File).Count -eq 0
+} | ForEach-Object { Write-Warning "Empty dir in package: $($_.FullName)" }
+```
+
+Discovered 2026-05-23 while installing cs-cron-master v1.0.0 on Virtuemarttemplates.net. The component's mkdir-scaffold step created the `sql/updates/mysql` directory in anticipation of future migrations; the install bombed on the first upload to a real Joomla site even though the local PHP syntax check and 7-Zip directory-entry check both passed.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
