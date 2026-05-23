@@ -633,6 +633,90 @@ Discovered 2026-05-23 while installing cs-cron-master v1.0.0 on Virtuemarttempla
 
 ---
 
+## 23. View `HtmlView` properties must be `public`, not `protected`
+
+**Symptom:** the moment you visit a list view that uses Joomla's standard `joomla.searchtools.default` layout (i.e. any list view with filter chips at the top), the page errors out with:
+
+```
+0 Cannot access protected property
+Cybersalt\Component\YourComponent\Administrator\View\Items\HtmlView::$filterForm
+```
+
+Same shape of error for `$items`, `$pagination`, `$state`, `$activeFilters` — any property the layout reads from outside the class.
+
+**Cause:** PHP-21+ enforces protected-vs-public visibility strictly. Joomla's `LayoutHelper::render('joomla.searchtools.default', ['view' => $this])` passes the view object into a generic layout, which then reads `$displayData->filterForm`. The layout is not a method of your view class, so protected properties are inaccessible.
+
+**Fix:** every property your view exposes to a layout MUST be `public`:
+
+```php
+final class HtmlView extends BaseHtmlView
+{
+    public $items;
+    public $pagination;
+    public $state;
+    public $filterForm;
+    public $activeFilters;
+    // ...
+}
+```
+
+Joomla's own core components (`com_content`, `com_users`, etc.) declare these as `public` for exactly this reason. PHPDoc-only documentation of "intended visibility" doesn't change runtime enforcement.
+
+**Don't be fooled by a local dev test passing.** If you only test your view by visiting it on a Joomla instance whose searchtools layout was overridden, or by render-mocking it in unit tests, you won't hit this error until production. Always test list views with searchtools active on a clean Joomla install.
+
+Discovered 2026-05-23 installing cs-cron-master v1.0.0 on Virtuemarttemplates.net. Errored on the first click of "Jobs" in the admin menu.
+
+---
+
+## 24. Package `.sys.ini` does NOT auto-load in the package's own `script.php` postflight
+
+**Symptom:** the package's post-install card renders raw language constants instead of translated text:
+
+```
+PKG_YOURPKG_POSTINSTALL_INSTALLED
+PKG_YOURPKG_POSTINSTALL_OPEN
+```
+
+…where you expected:
+
+```
+Your Package has been installed successfully.
+Open Extension
+```
+
+**Cause:** Joomla's package installer copies the package's `language/<tag>/pkg_yourpkg.sys.ini` file into `administrator/language/<tag>/<tag>.pkg_yourpkg.sys.ini` as part of the install steps. But the active `Language` object — the one `Text::_()` queries — was built BEFORE that copy happened. The new file is on disk but the in-memory language store doesn't know about it yet. The next page load (or next request) would see the translated strings; the postflight echo doesn't.
+
+This is different from a component's `.sys.ini` (which is loaded earlier in the install chain) and different from a plugin's `.sys.ini` (which Joomla loads automatically when the plugin executes its own events). Packages are the odd one out.
+
+**Fix:** force-load the package's `.sys.ini` at the top of `postflight()` before calling `Text::_()`:
+
+```php
+public function postflight(string $type, InstallerAdapter $adapter): bool
+{
+    if (!\in_array($type, ['install', 'update', 'discover_install'], true)) {
+        return true;
+    }
+
+    // Joomla's Language object at postflight() time was built before our
+    // pkg_*.sys.ini was copied to administrator/language. Force-load so
+    // Text::_() resolves package keys instead of rendering raw constants.
+    Factory::getApplication()->getLanguage()->load(
+        'pkg_yourpkg.sys',
+        JPATH_ADMINISTRATOR
+    );
+
+    // ... now Text::_('PKG_YOURPKG_POSTINSTALL_INSTALLED') works ...
+}
+```
+
+**Belt-and-braces alternative:** wrap every `Text::_()` call in a defensive `$lang->load()` before each use. The single load at the top of `postflight()` is cleaner and works as long as you don't redirect or re-render mid-function.
+
+**Tangentially related:** if your package script.php AND your component script.php both echo a "Your extension is installed!" card, the user sees TWO stacked cards on the install screen. Pick one as the owner — usually the package script.php since it's the outermost — and strip the duplicate from the inner extensions' postflights.
+
+Discovered 2026-05-23 installing cs-cron-master v1.0.0 on Virtuemarttemplates.net.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
