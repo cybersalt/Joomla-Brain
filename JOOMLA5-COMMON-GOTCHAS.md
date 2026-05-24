@@ -717,6 +717,51 @@ Discovered 2026-05-23 installing cs-cron-master v1.0.0 on Virtuemarttemplates.ne
 
 ---
 
+## 25. On cPanel / EasyApache 4, `/usr/bin/php` is PHP-CGI, not PHP-CLI
+
+**Symptom:** a Joomla CLI script (`cli/joomla.php`, custom component CLI, `cli/cs-cron-master.php`, etc.) runs cleanly from your local dev box but fails when invoked from cron on a cPanel-hosted server. Either:
+
+- The cron log fills with `Status: 500 Internal Server Error / Content-type: text/html; charset=UTF-8` repeating per firing, OR
+- Cron emails you "Status: 500 Internal Server Error" on each tick, OR
+- Nothing visible happens, but your Joomla `#__schemas`/`#__cscronmaster_log`/whatever tables never get the row you expected.
+
+**Cause:** on cPanel + EasyApache 4 servers, `/usr/bin/php` is symlinked to the **CGI** binary, not the **CLI** binary. CGI is the right binary when Apache invokes PHP for a web request; CLI is the right binary for cron / shell scripts. They differ in what `PHP_SAPI` reports (`cgi-fcgi` vs `cli`), what output convention they use (CGI wraps everything in HTTP headers; CLI doesn't), and how they handle non-zero exit codes (CGI translates exit-non-zero into HTTP 500).
+
+A Joomla CLI script that does:
+
+```php
+if (\PHP_SAPI !== 'cli') {
+    \fwrite(\STDERR, "This script can only be run from the command line.\n");
+    exit(1);
+}
+```
+
+…will trip the guard under CGI and `exit(1)`. PHP-CGI then emits a `Status: 500 Internal Server Error / Content-type: text/html; charset=UTF-8` response (because the script "errored"). Cron captures that as the script's output. Your bootstrap never runs.
+
+**Fix:** point cron at the explicit CLI binary for the user's selected PHP version:
+
+```cron
+*/5 * * * * /opt/cpanel/ea-php83/root/usr/bin/php /home/USER/public_html/cli/your-script.php
+```
+
+The format is `/opt/cpanel/ea-php{XX}/root/usr/bin/php` where `XX` matches the cPanel "MultiPHP Manager" version configured for the account (80/81/82/83/84/etc). This is the **CLI** binary inside the ea-phpXX RPM. Verify it exists with `Fileman::list_files` against `/opt/cpanel/ea-php83/root/usr/bin/`.
+
+`/usr/local/bin/php` is *also* CLI on most cPanel boxes (it points to whatever PHP version was last installed by cPanel), but the explicit `/opt/cpanel/ea-php83/...` path is more reliable when the box has multiple PHP versions installed — it pins to the version you tested against. Use it.
+
+**Don't trust working examples from other extensions' cron entries on the same box.** Akeeba Backup's nightly cron on VMT also uses `/usr/bin/php` — and might be silently failing the same way for months because nobody reads cron output. Just because another cron is "set up that way" on the same server doesn't mean it works.
+
+**Detection helper:** if cron output is opaque (redirected to `/dev/null` or unread), add a one-liner to the top of your CLI script that writes a probe entry early:
+
+```php
+\fwrite(\STDERR, '[' . date('c') . '] SAPI=' . \PHP_SAPI . "\n");
+```
+
+Run the cron once, check the log: if you see `SAPI=cli` you're golden; if you see `SAPI=cgi-fcgi` (or no output at all + an HTTP 500), you're hitting this gotcha.
+
+Discovered 2026-05-23 setting up cs-cron-master's CLI cron on Virtuemarttemplates.net (green.cybersalthosting.com, ea-php83 cPanel box).
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
