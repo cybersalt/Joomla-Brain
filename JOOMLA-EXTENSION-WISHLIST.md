@@ -154,6 +154,66 @@ Every extension passes a `security-review` skill run with **zero HIGH or MEDIUM 
 
 ---
 
+## 📋 Standard Log Viewer (Every Extension With Runtime Logs)
+
+**Source:** Tim Davis, established as an explicit wishlist rule 2026-05-23 while building cs-cron-master's enhanced log view.
+
+**Pattern:** Every Cybersalt extension that records runtime events — cron runs, API calls, file operations, anything that benefits from "what just happened?" diagnostics — ships with a **consistent log viewer** with the following features. This isn't optional; muscle memory across extensions is the goal.
+
+### Required features
+
+1. **Top button bar** in this order:
+   - **Refresh** — round-trip back to the logs view, preserves active filters
+   - **Dump** (plain text) — opens the current filtered set as text in a new tab so the user can copy/paste into a support ticket or Slack
+   - **Download CSV** — exports the current filtered set as a CSV file (`<extname>-log-YYYYMMDD-HHMMSS.csv`)
+   - **Delete** (selected rows, standard Joomla confirm)
+   - **Clear All** — opens a **Bootstrap modal confirm** before wiping the table (not just a JS alert; not a direct link)
+
+2. **Stats bar** at the top, with one card per metric:
+   - Total entries
+   - Last 24 hours
+   - Success count (green)
+   - Warning count (yellow)
+   - Error count (red)
+   - Any extension-specific counts (e.g. "Skip", "Throttled", "Cached hit")
+   - **Each card is a clickable filter link** to the matching filtered view — wishlist rule "📊 Hotlinked dashboard stats" applies here too
+
+3. **Filters** in the searchtools chip row (every visible column has one — wishlist rule "🔍 Filter every column" applies):
+   - Free-text search across summary + job-name (or whatever the per-row context is)
+   - Status filter (success / warning / error / skip)
+   - Trigger / source filter (manual / cron / API / etc.)
+   - **Time-range filter**: Last hour / Last 24h / Last 7d / Last 30d / Any time
+   - Per-extension grouping (e.g. job-id for cron logs, request-id for HTTP logs)
+
+4. **Per-entry display**:
+   - Timestamp (with finished-at tooltip if applicable)
+   - Linkified entity reference (job name links to job edit, request-id links to detail, etc.)
+   - **Color-coded status badge** (Bootstrap `bg-success` / `bg-warning text-dark` / `bg-danger` / `bg-secondary`)
+   - Elapsed time in ms
+   - **Expandable verbose details** via HTML `<details>` — keeps the row compact, shows the full stack trace / JSON / verbose output on click
+   - Verbose output rendered in a bordered `<pre>` (no `bg-*` background — let Atum handle theme), `max-height: 320px`, `white-space: pre-wrap` so long lines wrap
+
+5. **Empty-state alert** when no rows match the current filters (not a blank table)
+
+6. **Dark-mode safe styling** — Bootstrap utility classes only; no inline `bg-light` / `bg-white` / inline colors; rely on Atum native theme variables; use `border` to delineate `<pre>` blocks instead of background
+
+### Reference implementations
+
+- **DB-backed model** (one row per event in a `#__<ext>_log` table): [cs-cron-master](https://github.com/cybersalt/cs-cron-master) — `admin/tmpl/logs/default.php` + `admin/src/Model/LogsModel.php` (`getStats()`, `getCsv()`, `getTextDump()`)
+- **File-backed model** (newline-delimited JSON in `logs/<ext>.log`): [cs-joomla-router-tracer](https://github.com/cybersalt/cs-joomla-router-tracer) — `tmpl/viewer.php`
+
+The DB-backed pattern is preferred for new extensions because it gets the full benefit of Joomla's `ListModel` / `searchtools` / pagination infrastructure for free. Reach for the file-backed pattern only when the extension *already* logs to a file for some other reason (e.g. a system plugin that has to log from contexts where the Joomla DB isn't available).
+
+### What this means for new extensions
+
+When a new extension would benefit from runtime logging, the choice isn't "should we add a log viewer?" — it's "DB-backed or file-backed?" Always one of those two, never "skip it." The user's workflow when something goes wrong should be: open the extension, click Logs, see what happened, dump-to-clipboard for the support ticket. Anything less is a regression.
+
+**Why it matters:** Cybersalt extensions get deployed across a fleet of client sites. When something goes wrong on a site Tim hasn't touched in months, the only thing standing between "I can fix this in 5 minutes" and "I need to SSH in and grep the Apache log" is a thorough in-extension log viewer. The investment in building one pays for itself the first time it saves an emergency support session.
+
+**Implementation pointer:** see `cs-cron-master`'s LogsModel for the canonical `getStats()` / `getCsv()` / `getTextDump()` triad that the toolbar buttons hang off. Roughly 120 lines of model code plus 100 lines of tmpl. Not a lot; just enforce it everywhere.
+
+---
+
 ## 📝 Changelog (Markdown + HTML, Kept In Sync)
 
 **Already documented in:** [[README.md]] → Changelog Format + [[VERSION-BUMP-CHECKLIST.md]].
