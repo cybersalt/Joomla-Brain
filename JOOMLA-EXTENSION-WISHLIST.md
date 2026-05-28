@@ -439,6 +439,43 @@ List views generally don't have field descriptions, so the toggle is unnecessary
 
 ---
 
+## ⇧ Shift-Click Range Selection on Bulk-Action Lists
+
+**Source:** Tim Davis, while testing cs-remove-sample-data v1.0.5 (May 2026).
+
+**Pattern:** Any admin list view where each row carries a checkbox for a bulk action (remove, publish, batch, etc.) must support **shift-click range selection**. Click the first checkbox, hold Shift, click a second checkbox further down (or up) the list, and every checkbox between the two snaps to the second click's state — ticked or unticked. The range is scoped per group/table: shift-clicks don't cross into a separate card or table on the same page.
+
+```javascript
+// Per-group setup. `boxes` = Array.from(form.querySelectorAll('.row-checkbox[data-group="' + group + '"]'))
+const lastClickedByGroup = {};
+boxes.forEach(function (b) {
+    b.addEventListener('click', function (e) {
+        const last = lastClickedByGroup[group];
+        if (e.shiftKey && last && last !== b) {
+            const i1 = boxes.indexOf(last);
+            const i2 = boxes.indexOf(b);
+            if (i1 !== -1 && i2 !== -1) {
+                const start = Math.min(i1, i2);
+                const end   = Math.max(i1, i2);
+                const state = b.checked;
+                for (let i = start; i <= end; i++) {
+                    boxes[i].checked = state;
+                }
+                window.getSelection && window.getSelection().removeAllRanges();
+            }
+        }
+        lastClickedByGroup[group] = b;
+        // refresh master-checkbox state and ticked-count here too
+    });
+});
+```
+
+**Why it matters:** When a list runs to dozens or hundreds of rows, ticking each one individually is tedious and error-prone. Shift-click is the universal table-list muscle memory from desktop file managers, spreadsheets, Gmail, Trello — every Cybersalt list view should honour it instead of forcing the operator to click each row separately. Pair it with a per-group master checkbox and a global "Tick all everywhere" / "Untick all everywhere" pair of buttons so the operator has three speeds: one-at-a-time, range, all.
+
+**Implementation pointer:** Track `lastClickedByGroup` outside the click handler so it persists between events; key by the data-group attribute so each table/card scopes its own range. Read `b.checked` AFTER the click event fires (the browser has already toggled the box by then), and propagate that value to every box in the inclusive range. Always clear `window.getSelection()` afterwards — shift-click on the page also tries to start a text-selection range, which looks broken if you leave it. Reference implementation: `media/js/admin.js` in [cs-remove-sample-data](https://github.com/cybersalt/cs-remove-sample-data).
+
+---
+
 ## ➕ Adding to This List
 
 When you encounter something that *should* be in every extension but isn't here yet, add a section using the same template:
