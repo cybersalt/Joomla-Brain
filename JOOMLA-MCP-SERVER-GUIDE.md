@@ -462,6 +462,49 @@ When wrapping a third-party extension (4SEO, Akeeba, VirtueMart, etc.), ship the
 
 ---
 
+## 26b. Register the target component's admin form path before calling AdminModel::save()
+
+The footgun: when an MCP tool runs from the API app (`api/index.php/...`) and calls another component's `AdminModel::save()`, post-save hooks (workflow, contenthistory, fields, finder) call `getForm()` to filter/version the data. Those hooks resolve form files via `FormHelper::addFormPath()`, whose defaults are wired up by the component's `extension.php` boot based on `JPATH_COMPONENT` — and in the API app `JPATH_COMPONENT` resolves to *your* MCP component, not `com_content`.
+
+Result: `$table->store()` succeeds (the INSERT happens), then the post-save plugin chain throws `Form::loadForm could not load file` because `administrator/components/com_content/forms/article.xml` isn't on the form path. `AdminModel::save()` catches the throw, calls `setError()`, and returns `false`. Your tool dutifully reports `isError: true` — but **the row was already written**. Any agent that retries the call silently spawns a duplicate.
+
+Symptom for `cs-mcp-for-j`: `create_article` reports failure but the article exists. Tested in the wild by Claude on Joomla 6.1.1, May 2026.
+
+**The fix** — in the base class that hands out cross-component models, register the admin form + field paths up front:
+
+```php
+protected function getModel(string $component, string $name, string $client = 'Administrator'): object
+{
+    $adminBase = JPATH_ADMINISTRATOR . '/components/' . $component;
+    if (is_dir($adminBase . '/forms')) {
+        FormHelper::addFormPath($adminBase . '/forms');
+    }
+    if (is_dir($adminBase . '/fields')) {
+        FormHelper::addFieldPath($adminBase . '/fields');
+    }
+    return $this->bootComponent($component)->getMVCFactory()
+        ->createModel($name, $client, ['ignore_request' => true]);
+}
+```
+
+**The belt-and-braces** — even with the path fix, never trust `AdminModel::save()`'s return value as the sole signal that an INSERT happened. The row id assigned to model state (`$model->getState($model->getName() . '.id')`) is the truthful signal. Wrap it:
+
+```php
+$result = $this->saveAdminModel($model, $data); // returns ['ok', 'id', 'error']
+if ($result['id'] <= 0) {
+    return ToolResult::error('component rejected: ' . ($result['error'] ?: 'unknown'));
+}
+// id > 0 means the row exists. Treat as success even if save() returned false,
+// and surface the post-save error as a warning rather than an error:
+$response['post_save_warning'] = $result['error'] ?: null;
+```
+
+This prevents duplicate-spawn-on-retry from any *future* post-save plugin chain that throws for unrelated reasons.
+
+`com_users` is a special case: its model's `getState('user.id')` is unreliable. Look the new user up by username instead.
+
+---
+
 ## 27. Document the clean-room provenance
 
 If you're building MCP tools for a Joomla extension that has its own (incompatibly-licensed) MCP server out there — e.g. MCP4Joomla is AGPL-3.0, you're targeting JED which requires GPL-2.0-or-later — ship a `BUILD-NOTES.md` that records the reference sources you DID consult and explicitly states what you did NOT (the AGPL source). That note isn't shipped in the release zip, but it lives in the repo as proof of independent development if anyone ever questions the licensing.
