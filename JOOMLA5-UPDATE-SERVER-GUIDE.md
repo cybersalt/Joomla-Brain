@@ -194,6 +194,24 @@ $xml .= '<targetplatform name="joomla" version="' . $majorVersion . '\.[0-9]+" /
 
 **Symptom**: The update XML returns a valid `<update>` block, but Joomla shows no updates available. The targetplatform regex didn't match the running Joomla version.
 
+### Joomla 5 → Joomla 6 transition: empty max field collapses to J5-only
+
+When supporting **both** Joomla 5 and Joomla 6 from the same package, the regex builder needs **both** majors in the output. Pattern: `(5|6)\.[0-9]+`. **Don't leave `max_joomla_version` empty thinking it means "unbounded"** — most regex builders interpret missing-max as "max = min", which collapses the regex back to single-major (`5\.[0-9]+`) and J6 sites silently never get the update.
+
+If the regex builder follows the cs-release-manager pattern:
+
+```php
+$minMajor = (int) $minJoomla;        // e.g. 5 from "5.0"
+$maxMajor = (int) $maxJoomla;        // e.g. 0 from "" — empty parses as 0
+if ($maxMajor < $minMajor) {
+    $maxMajor = $minMajor;           // empty → maxMajor = 5 → single-major output
+}
+```
+
+…then to support J5+J6 you must set `max_joomla_version` to **any string starting with "6"** — `"6"`, `"6.0"`, `"6.99"` all work because `(int)` of any of them is `6`. **`"6"` is the cleanest value** (no fake decimal precision, no confusing "6.99" that suggests an upper bound that doesn't exist). Reserve **empty** for "this release really is J5-only and shouldn't show up on J6 sites at all" — which is rare.
+
+Documented after cs-mcp-for-j v1.10.x publishing flow: leaving `max_joomla_version` empty rebuilt the regex as J5-only and no Joomla 6 site ever saw the update XML announcement, even though the package itself was J6-compatible.
+
 ---
 
 ## SHA256 Checksum (Best Practice)

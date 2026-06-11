@@ -481,3 +481,133 @@ If the view has a mapping table:
 - [ ] JS bulk-action handler mirrors show/hide of auxiliary inputs (destination picker / new-title input).
 
 Ship it.
+
+---
+
+## Card / catalog views — same shell, no form submit
+
+The pattern above assumes a traditional **list view with server-side filtering** (form-submitting `<select>`s, query string carries the filter state, the database does the work). When the view is a **card grid / catalog** with the entire dataset already in the DOM — admin browse-catalog screens, dashboard widgets, settings cards, etc. — **reuse the exact same searchtools shell** but wire the JS purely client-side.
+
+The user can't tell the difference: same search box, same Filter Options toggle, same dropdown placeholders, same Clear button. The implementation underneath swaps `form.submit()` for a `apply()` function that toggles `.d-none` on cards.
+
+### Required adaptations
+
+**Container start state.** Use a Bootstrap class-swap (`d-none` / `d-flex`), NOT inline `style="display:none"`:
+
+```html
+<!-- WRONG — Bootstrap's d-flex has !important and overrides inline display:none -->
+<div class="js-stools-container-filters d-flex" style="display:none">
+
+<!-- RIGHT — start hidden via d-none, toggle to remove d-none when shown -->
+<div class="js-stools-container-filters d-none d-flex flex-wrap gap-2">
+```
+
+When both `d-none` and `d-flex` are present, `d-none` wins (later in Bootstrap's stylesheet). Removing `d-none` reveals the flex layout. This avoids fighting Bootstrap's `!important` rules.
+
+**Don't trust `.js-stools-container-filters` to auto-flex.** Joomla Atum's CSS sometimes styles this container as flex, sometimes doesn't, depending on the admin template + Joomla minor version. **Belt-and-braces:** stamp `d-flex flex-wrap gap-2` directly on the container so the layout is correct regardless. Each `.js-stools-field-filter` gets an inline `style="flex: 0 1 auto; min-width: 180px"` so dropdowns don't crush when the row narrows.
+
+**Card data attributes carry the filter dimensions.** Each filterable card carries one `data-<dimension>="<value>"` attribute per filter:
+
+```html
+<div class="catalog-card"
+     data-name="mcp add-on for 4seo"
+     data-tier="free"
+     data-installed="yes"
+     data-enabled="yes"
+     data-update="no">
+    ...
+</div>
+```
+
+**Filter dropdowns use Joomla's "- Select X -" placeholder pattern.** First option is `value=""` with text `- Select Tier -` (placeholder). When the placeholder is selected, the filter dimension is ignored — equivalent to "Any". This matches the article-list look exactly.
+
+```html
+<select class="form-select catalog-filter-select" id="filter-tier" aria-label="Filter by tier">
+    <option value="">- Select Tier -</option>
+    <option value="free">Free</option>
+    <option value="pro">Pro</option>
+</select>
+```
+
+**Filter JS uses a `SELECT_MAP` so adding a dimension is one map row + one dropdown:**
+
+```javascript
+var SELECT_MAP = {
+    'filter-tier':      'data-tier',
+    'filter-installed': 'data-installed',
+    'filter-enabled':   'data-enabled',
+    'filter-update':    'data-update'
+};
+
+function apply() {
+    var query = (searchEl.value || '').trim().toLowerCase();
+    var filters = {};
+    Object.keys(SELECT_MAP).forEach(function (id) {
+        var el = document.getElementById(id);
+        filters[id] = el ? el.value : '';
+    });
+
+    cards.forEach(function (card) {
+        var name      = card.getAttribute('data-name') || '';
+        var nameMatch = !query || name.indexOf(query) !== -1;
+        var allMatch  = nameMatch;
+        if (allMatch) {
+            for (var id in SELECT_MAP) {
+                var wanted = filters[id];
+                if (!wanted) continue;  // empty = "Any" = skip this dimension
+                if (card.getAttribute(SELECT_MAP[id]) !== wanted) {
+                    allMatch = false;
+                    break;
+                }
+            }
+        }
+        card.classList.toggle('d-none', !allMatch);
+    });
+}
+
+searchEl.addEventListener('input', apply);
+selects.forEach(function (el) { el.addEventListener('change', apply); });
+clearBtn.addEventListener('click', function () {
+    searchEl.value = '';
+    selects.forEach(function (el) { el.value = ''; });
+    apply();
+});
+toggleBtn.addEventListener('click', function () {
+    panelEl.classList.toggle('d-none');
+    toggleBtn.setAttribute('aria-expanded',
+        panelEl.classList.contains('d-none') ? 'false' : 'true');
+});
+apply();
+```
+
+### Language string for "Filter Options"
+
+**Joomla 5/6 does NOT have a stable `JSEARCH_TOOLS` core string** — the button text in Joomla's own admin is rendered via the searchtools layout helper and the underlying constant changes between point releases. **Define your own component string** rather than relying on a core constant that may not exist on the install:
+
+```ini
+; In com_yourthing.ini
+COM_YOURTHING_FILTER_OPTIONS="Filter Options"
+```
+
+Then the template uses `Text::_('COM_YOURTHING_FILTER_OPTIONS')`. Don't waste an afternoon reverse-engineering which Joomla core constant maps to the literal text "Filter Options" — just own the string.
+
+For everything else, **DO reuse Joomla core strings:** `JSEARCH_FILTER` (search placeholder), `JSEARCH_FILTER_SUBMIT` (magnifier `aria-label`), `JSEARCH_FILTER_CLEAR` (clear button text). Those are stable across Joomla 5.x.
+
+### Reference implementation
+
+`cs-mcp-for-j` v1.10.x catalog view — see `packages/com_csmcpforj/admin/tmpl/catalog/default.php`. Card grid showing Free / Pro MCP add-ons, four filter dimensions (tier / installed / enabled / update-available), all client-side. Copy-pasteable starting point.
+
+### Sanity check for client-side card filters
+
+- [ ] Top row: search + magnifier button on the left of the bar, Filter Options + Clear on the right. All on **one row** (wrapped in `d-flex flex-wrap gap-2 justify-content-end`).
+- [ ] Filter panel starts hidden via `d-none` class, NOT inline `style="display:none"`.
+- [ ] Panel container has explicit `d-flex flex-wrap gap-2` for horizontal dropdown layout.
+- [ ] Each `.js-stools-field-filter` has `min-width: 180px` so dropdowns don't crush.
+- [ ] First `<option>` of every dropdown is `value=""` with `- Select Foo -` text.
+- [ ] Each filterable card carries one `data-<dimension>` attribute per filter dimension, plus `data-name` (lowercased) for the search field.
+- [ ] Apply function uses `card.classList.toggle('d-none', !allMatch)` — no inline styles, no DOM removal.
+- [ ] Clear button resets search + every dropdown to `""` and re-runs apply.
+- [ ] Toggle button updates its own `aria-expanded`.
+- [ ] "Filter Options" text comes from the component's own language file, not a Joomla core constant.
+
+Same look-and-feel as the article-list filter; zero cognitive overhead for the admin operator.
