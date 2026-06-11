@@ -118,3 +118,56 @@ For a package extension with `<packagename>xxx</packagename>`, declare the packa
 ```
 
 …even if the plugin's own XML also declares those same files. Duplicate declarations are harmless; missing declarations silently break translation in the Extensions Manager list and the package info panel.
+
+---
+
+## 6. Shim missing Joomla CORE language keys from your own plugin's `.ini`
+
+Joomla's core language packs occasionally ship missing newer string keys. The screen renders the raw key name instead of the translated value — e.g. `COM_SCHEDULER_PARAMETERS_FIELDSET_LABEL` showing as a literal label on the Scheduled Tasks edit screen on some Joomla 5.x point releases.
+
+**Workaround**: define the missing core key in your *own* plugin/component's `.ini` file. Joomla's translation lookup pulls from a single global string pool, so any loaded `.ini` providing the key will resolve it.
+
+```ini
+; In plg_task_yourplugin.ini, shimming a com_scheduler core key
+; that was missing on Joomla 5.0–5.1 en-GB packs:
+COM_SCHEDULER_PARAMETERS_FIELDSET_LABEL="Parameters"
+```
+
+**Why this is safe**:
+
+- If the user's Joomla version DOES ship the key, the core pack's value wins (later-loaded `.ini` files don't override earlier ones unless explicitly merged).
+- If the key is missing, your shim resolves it.
+- Either way the user sees a translated string instead of a raw key.
+
+**Discovered in `cs-template-integrity` v2.4.0** while building `plg_task_cstemplateintegrity`. The Joomla 5.x en-GB pack on the test site was missing `COM_SCHEDULER_PARAMETERS_FIELDSET_LABEL`. Defining it in the plugin's own `.ini` fixed the display without touching core files or shipping a custom language pack.
+
+**Don't abuse this**: shim only well-known core keys that are *clearly* missing on the user's install. Shimming arbitrary `COM_*` keys to override Joomla's own values is risky (load order can flip between versions, your "override" may break on a different Joomla install). The use case is strictly "Joomla forgot to ship this string in this language for this version."
+
+---
+
+## 7. Component submenu strings MUST be in `.sys.ini`, not just `.ini`
+
+**Symptom**: your component's parent label in the Joomla admin sidebar translates fine ("MCP for Joomla"), but the submenu items underneath show raw constants like `COM_CSMCPFORJ_SUBMENU_DASHBOARD` / `COM_CSMCPFORJ_SUBMENU_CATALOG` — but ONLY when you're viewing OTHER admin pages (Components → Maximenu CK, Extensions → Manage, etc.). When you're inside your own component, the submenu translates correctly. It looks like a phantom bug.
+
+**Why**: Joomla loads `<componentname>.ini` only when the user is currently inside that component. For the admin chrome (sidebar menu, plugin manager, extension manager rows) on every OTHER page, it only loads `<componentname>.sys.ini`. The parent label string (e.g. `COM_CSMCPFORJ`) is conventionally in `.sys.ini` so it always translates. The submenu strings often get put in `.ini` only because that's the "main" language file — and that's the bug.
+
+**Fix**: duplicate every submenu string into `.sys.ini` as well. Joomla loads both when you're inside the component, so the strings are still translated there.
+
+```ini
+; In com_yourthing.sys.ini — must be here so the admin sidebar can
+; translate the submenu labels when the user is anywhere OTHER than
+; inside this component.
+COM_YOURTHING="Your Component"
+COM_YOURTHING_SUBMENU_DASHBOARD="Dashboard"
+COM_YOURTHING_SUBMENU_SETTINGS="Settings"
+```
+
+This applies to any component-defined string that appears in Joomla's admin chrome:
+
+- `<submenu>` entries in the component manifest
+- ACL action titles in `access.xml` (`COM_YOURTHING_ACTION_*`)
+- The component's own display name in Extensions → Manage
+
+**Discovered in `cs-mcp-for-j` v1.10.2** when Tim noticed the catalog/dashboard submenu items rendered as raw constants in the sidebar from the Maximenu CK admin page. The strings were defined in `com_csmcpforj.ini` but not in `com_csmcpforj.sys.ini`. Adding the duplicates to `.sys.ini` fixed it instantly.
+
+**Don't move, duplicate**: don't *move* the strings from `.ini` to `.sys.ini` — the `.ini` is still where component-internal screens read translations from. Duplicate, even though it feels wrong. Joomla's translation lookup deduplicates on lookup, so the duplicate doesn't waste memory or cause conflicts.
