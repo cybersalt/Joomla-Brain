@@ -476,6 +476,52 @@ boxes.forEach(function (b) {
 
 ---
 
+## ⚪ White Disc Behind the Brand Logo on Dark Surfaces
+
+**Source:** Tim Davis, while reviewing cs-articles-module-maxxed v1.3.0 (2026-06-17). Inspired by the cs-siteground-cache header treatment.
+
+**Pattern:** Anywhere a Cybersalt brand logo appears on a dark surface — install-card header in dark Atum, plugin-settings tab brand header, dashboard hero, admin notification panel, frontend module brand element — wrap the SVG in a white circular disc. The cobalt + orange artwork loses contrast against slate-800 backgrounds; a white disc gives it back its readability without changing the artwork itself. **Light mode keeps the logo bare** — the disc only renders in dark mode.
+
+Padding ≈ 10–15% of the logo's intrinsic size gives a visibly larger disc that mirrors the cs-siteground-cache treatment. Anything smaller looks like a clip mask; anything larger looks like a separate UI chip.
+
+**Why it matters:** The brand logo is the "this is a Cybersalt extension" signal. If it disappears against a dark background, brand recognition gets lost in dark mode — and Joomla 5/6 admin runs in dark mode a lot. A consistent white-disc treatment everywhere keeps the brand legible in both light and dark and makes the family of extensions feel intentional rather than "we forgot about dark mode."
+
+**Implementation pointer:** One CSS rule per surface that displays a logo:
+
+```css
+html[data-bs-theme="dark"] .your-surface img.brand-logo,
+html[data-color-scheme="dark"] .your-surface img.brand-logo {
+    background-color: #fff;
+    border-radius: 50%;
+    padding: 6px;
+    box-sizing: content-box;
+}
+```
+
+Joomla 5/6 uses BOTH `data-bs-theme="dark"` and `data-color-scheme="dark"` depending on template/version — match both. `box-sizing: content-box` keeps the padding *outside* the original image dimensions so the disc visibly extends past the artwork (rather than shrinking the logo to fit inside).
+
+Reference implementation: cs-articles-module-maxxed v1.3.0 — see `src/Field/BrandheaderField.php` (`renderPageInfoLogoInjection()` for the JS-injected variant + `renderFullBrandHeader()` for the card variant) and `script.php` (`renderInstallCard()`) — three branded surfaces, same rule applied to each.
+
+**Companion to:** §"Post-Install Card With Next Steps" and §"Branded Tab Header on Every Settings Fieldset" — both inherit this rule on their dark-mode renderings.
+
+---
+
+## 🖼 Branded Tab Header on Every Settings Fieldset
+
+**Source:** Tim Davis, while reviewing cs-articles-module-maxxed v1.3.0 (2026-06-17).
+
+**Pattern:** Every fieldset in a Cybersalt extension's settings form (plugin params, component options, module params) renders a small branded header card as its first row — extension logo on the left at ~48px, plugin/component name as a coloured `<h4>` heading, a per-fieldset subtitle ("Skip-articles configuration", "Support contact information", "API credentials", etc.) underneath in muted text. Same light/dark CSS-variable theming as the post-install card (white background + cobalt title in light Atum, slate background + brand orange title in dark Atum). All CSS scoped to a `.cs-plugin-tab-header` class so it doesn't leak into the rest of the form.
+
+The pattern uses a tiny **custom form field type** — `BrandheaderField` extending `Joomla\CMS\Form\FormField` — that overrides `renderField()` to emit the header HTML and returns `''` from `getInput()` so no input row renders. The XML attribute `subtitle="LANG_KEY"` lets each fieldset describe itself in one line.
+
+**Why it matters:** Joomla's default tabbed-settings UI gives the operator *no* visual cue about which extension's settings they're currently in — every plugin's tabs look identical. Once a site has a dozen Cybersalt extensions installed, "which one am I in?" becomes a real friction point. A small branded header per tab solves it instantly and reinforces the family look. Also gives every settings tab a one-line statement of purpose, which is half the value of inline help without needing the inline-help toggle to be on.
+
+**Implementation pointer:** Reference implementation in [cs-articles-module-maxxed v1.3.0](https://github.com/cybersalt/cs-articles-module-maxxed) — see `src/Field/BrandheaderField.php` for the custom field class, and `csarticlesmodulemaxxed.xml` for the `<fields name="params" addfieldprefix="Cybersalt\Plugin\System\Csarticlesmodulemaxxed\Field">` wiring + per-fieldset `<field type="brandheader" subtitle="..."/>` placements. The field is ~80 lines including the scoped CSS; copy + adjust the namespace + logo path per extension. Eventually worth extracting to a shared `cs-extension-ui` library if/when more than three extensions adopt it.
+
+**Companion to:** post-install card §"Post-Install Card With Next Steps" — uses the same colour variables and logo so the install card and the settings tabs feel like the same brand.
+
+---
+
 ## ➕ Adding to This List
 
 When you encounter something that *should* be in every extension but isn't here yet, add a section using the same template:
