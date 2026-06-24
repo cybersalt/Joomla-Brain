@@ -23,6 +23,31 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.5.0 — 2026-06-24
+
+Adds a new top-level checklist for listing Cybersalt extensions on the **Joomla Extensions Directory**. Distilled from the live JED submission of cs-template-integrity v2.4.2 on Watch Me Work episode #343 (2026-06-24), particularly @Bredc's (Bjørn Ove Bremnes) live catches of the three first-timer gotchas that bite every developer on their first JED submission.
+
+### 🚀 New
+
+- **2026-06-24** — `JED-SUBMISSION-CHECKLIST.md` (new top-level checklist). Covers:
+  - **Pre-flight asset audit** — *"always do cleaning before inviting JED on a visit"* (@Bredc). Current screenshots only (no 2019-era assets), CHANGELOGs in sync, README refreshed, license file present.
+  - **Gotcha #1: Download URL vs download page URL.** JED's "Download URL" field wants the file URL (`...api.userdownload&format=raw...` or GitHub release asset URL), not the human landing page. Verifiable via `curl -sIL` — expect `Content-Type: application/zip`, not `text/html`.
+  - **Gotcha #2: Logo URL must be fully qualified.** `/images/logo.svg` resolves against `extensions.joomla.org`, not your site, and 404s. Always paste full `https://www.cybersalt.com/...` URLs for logo + screenshots.
+  - **Gotcha #3: Support link + license page link are required fields.** Easy to miss until you've filled in the rest of the form. Support link → cybersalt.com/support or GitHub Issues. License link → gnu.org GPL-2.0 canonical or repo `LICENSE`.
+  - **Description prep workflow** — HTML→markdown convert step. JED's long-description field accepts markdown; feed the cybersalt.com article HTML through any converter (or Claude with a structure-preserving prompt) before pasting.
+  - **Screenshot tooling** — ShareX recommended (free, Windows, `Ctrl+PrintScreen` for active-window-only captures).
+  - **Category selection** with concrete category-to-extension-type mapping (Security / Backup / Performance / Templates / Custom Code & Display / Tools / Plug-ins → System).
+  - **Update server (`updates.xml`) verification** as a hard prerequisite (cross-references `JOOMLA5-UPDATE-SERVER-GUIDE.md`).
+  - **Field-by-field walkthrough of the submission form** with what-to-enter + gotchas per field.
+  - **Post-submission monitoring** — reviewer queue typical 1-4 weeks; what approval/revisions/rejection look like; ongoing listing-freshness obligations per release.
+
+### 📝 Docs
+
+- **2026-06-24** — `README.md` Checklists section updated to list `JED-SUBMISSION-CHECKLIST.md` with one-line summary.
+- **2026-06-24** — `NEW-EXTENSION-CHECKLIST.md` — new "List on JED (when extension is stable + v1.0+)" section near the bottom directing readers to the new checklist + warning against day-one submissions.
+
+---
+
 ## v1.4.0 — 2026-05-23
 
 Adds a new gotcha section (#21) to `JOOMLA5-COMMON-GOTCHAS.md` documenting the four-layer corruption chain that bites anyone building a Joomla 5 quickstart `custom.sql` from a real donor `mysqldump`. Hard-won from the Avant J5.4.5 quickstart rebuild loop (v10 → v14) on 2026-05-22 / 2026-05-23 — each version surfaced one new layer before the chain finally collapsed and v13 installed cleanly.

@@ -51,6 +51,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - `JOOMLA6-CHECKLIST.md`: Pre-release checklist for Joomla 6
 - `NEW-EXTENSION-CHECKLIST.md`: Creating a new Cybersalt extension
 - `VERSION-BUMP-CHECKLIST.md`: Version bump steps
+- `JED-SUBMISSION-CHECKLIST.md`: Listing an extension on the Joomla Extensions Directory — pre-flight asset audit (current screenshots, full-URL logos, fresh CHANGELOGs), the three first-timer gotchas (download URL vs page URL, full-URL logo, support + license links required), field-by-field walkthrough of the JED submission form, category selection, post-submission monitoring. Distilled from the live cs-template-integrity v2.4.2 JED submission on WMW #343 (2026-06-24).
 - `JOOMLA-EXTENSION-WISHLIST.md`: Cross-cutting UX/operational expectations every Cybersalt extension should ship with — lock-out modals during long-running operations, API-billing transparency, automated lint+test on every push, plus consolidated reminders for post-install card, 15-language coverage, security baseline, dark-mode testing
 
 ### Build & Packaging

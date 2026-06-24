@@ -60,9 +60,16 @@ Mirrors the v0.9.0 security review of cs-template-integrity. **The bar is "passe
 - [ ] **Initial commit and push** to GitHub
 - [ ] **Update REPOS-USING-BRAIN.md** — register the new repo in the Joomla Brain
 
+## List on JED (when extension is stable + v1.0+)
+
+After the extension has been live + stable for a release cycle or two, list it on the Joomla Extensions Directory for organic discovery. **Follow `JED-SUBMISSION-CHECKLIST.md`** — covers the pre-flight asset audit, the three first-timer gotchas (download URL vs page URL, full-URL logo, support + license link required fields), field-by-field walkthrough of the JED submission form, and post-submission monitoring.
+
+Don't submit on day one. JED reviewers prefer to see a real changelog history and at least one or two real releases. Submitting v0.1 is more likely to get bounced for "not ready."
+
 ## Reference
 
 - See `company-info.md` for author/copyright details
 - See `JOOMLA5-PLUGIN-GUIDE.md` for plugin structure
 - See `JOOMLA5-CHECKLIST.md` for pre-release checklist
+- See `JED-SUBMISSION-CHECKLIST.md` for listing on the Joomla Extensions Directory
 - See `PACKAGE-BUILD-NOTES.md` for build troubleshooting
