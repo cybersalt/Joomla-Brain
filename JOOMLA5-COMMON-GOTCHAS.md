@@ -762,6 +762,138 @@ Discovered 2026-05-23 setting up cs-cron-master's CLI cron on Virtuemarttemplate
 
 ---
 
+## 26. Custom Joomla CLI script: alias `SessionInterface` to `session.cli` BEFORE requesting `ConsoleApplication`
+
+**Symptom:** a custom CLI script for a component (e.g. `cli/yourext-cli.php`) crashes on every invocation with:
+
+```
+[yourext] FATAL: Resource 'Joomla\Session\SessionInterface' has not been registered with the container.
+#0 .../libraries/src/Service/Provider/Application.php(133): Joomla\DI\Container->get('Joomla\\Session\\...')
+#1 .../libraries/vendor/joomla/di/src/ContainerResource.php(162): {closure}(...)
+#2 .../libraries/vendor/joomla/di/src/Container.php(95): Joomla\DI\ContainerResource->getInstance()
+#3 .../cli/yourext-cli.php:LINE: Joomla\DI\Container->get('Joomla\\CMS\\Appl...')
+```
+
+**Cause:** Joomla 5/6's `ConsoleApplication` (and its `Joomla\Console\Application` alias) requires `Joomla\Session\SessionInterface` as a constructor dependency, the same way the web app does. The web bootstrap registers a real HTTP-session service for this. The CLI bootstrap registers `session.cli` (a no-op session that just satisfies the type contract) but does NOT automatically alias it to the `SessionInterface` key. Your script asks the container for `ConsoleApplication`, the container tries to autowire `SessionInterface`, finds no binding, throws.
+
+**Fix:** mirror Joomla core's own `cli/joomla.php` bootstrap exactly. Specifically, between `require framework.php` and `Factory::getContainer()->get(...)`, add the session-alias block:
+
+```php
+require_once JPATH_BASE . '/includes/framework.php';
+
+$container = \Joomla\CMS\Factory::getContainer();
+
+// Alias session keys to the CLI session backend BEFORE asking for ConsoleApplication.
+// Without these aliases, the container has no provider for SessionInterface (sessions
+// are an HTTP concept) and the next line throws "Resource has not been registered."
+$container->alias('session', 'session.cli')
+    ->alias('JSession', 'session.cli')
+    ->alias(\Joomla\CMS\Session\Session::class, 'session.cli')
+    ->alias(\Joomla\Session\Session::class, 'session.cli')
+    ->alias(\Joomla\Session\SessionInterface::class, 'session.cli');
+
+$app = $container->get(\Joomla\Console\Application::class);
+\Joomla\CMS\Factory::$application = $app;
+
+// ... your CLI logic here ...
+```
+
+**Why both `Session::class` and `SessionInterface::class` aliases?** Different parts of Joomla core ask for different keys. Aliasing only `SessionInterface::class` will get you past the first error and into a second one. Mirror the core block verbatim.
+
+**Don't try `$app = new ConsoleApplication(...)` instead.** Direct instantiation bypasses the DI container, leaves Factory::$application unset, and breaks every `Factory::getApplication()` call downstream — most Joomla extension code assumes Factory works.
+
+**Don't call `$app->execute()` from your custom CLI** unless you actually want Symfony's command-line argv parsing. For a script that runs a single dispatch loop (cron-style "run any due jobs"), just set `Factory::$application = $app` and call your business logic directly.
+
+**Reference:** [`cli/joomla.php`](https://github.com/joomla/joomla-cms/blob/5.4-dev/cli/joomla.php) in Joomla core is the canonical CLI bootstrap. Read it, copy the structure.
+
+Discovered 2026-05-23 setting up cs-cron-master's CLI on Virtuemarttemplates.net. Caught right after the §25 CGI-vs-CLI fix produced the first cron output we could actually read.
+
+---
+
+## 27. `CategoryServiceTrait` + `FieldsServiceTrait` both define `prepareForm()` — must use `insteadof`
+
+If your component's Extension class implements **both** `CategoryServiceInterface` (items belong in Joomla categories) **and** `FieldsServiceInterface` (items support Joomla custom fields), the natural `use CategoryServiceTrait; use FieldsServiceTrait;` line **fatals on first dispatch** with:
+
+```
+PHP Fatal error: Trait method Joomla\CMS\Fields\FieldsServiceTrait::prepareForm
+has not been applied as <YourComponent>::prepareForm, because of collision with
+Joomla\CMS\Categories\CategoryServiceTrait::prepareForm
+```
+
+Both traits define `prepareForm()`, and PHP refuses to silently pick one. You have to resolve the collision explicitly with `insteadof`:
+
+```php
+class GroundedinventoryComponent extends MVCComponent implements
+    BootableExtensionInterface,
+    CategoryServiceInterface,
+    FieldsServiceInterface
+{
+    use HTMLRegistryAwareTrait;
+    use CategoryServiceTrait, FieldsServiceTrait {
+        CategoryServiceTrait::prepareForm insteadof FieldsServiceTrait;
+    }
+    // ...
+}
+```
+
+**Why pick `CategoryServiceTrait`'s version?** That's what Joomla core's `com_content` does — and the custom-fields rendering still happens via the separate `plg_system_fields` subscriber on `onContentPrepareForm` (which is dispatched by your form load), so you don't lose field rendering on edit views by dropping the trait's `prepareForm`.
+
+**Symptom shape:** the component's manifest installs cleanly, the post-install card shows, the menu entry appears under Components — but the first click into the component returns HTTP 500. Joomla's standard error.php log doesn't capture the fatal (PHP terminates before Joomla's logger fires), so check the **per-domain PHP error log** at `~/logs/<domain>.php.error.log` on cPanel hosts.
+
+**Reference implementation:** `com_groundedinventory` v0.1.1, `admin/src/Extension/GroundedinventoryComponent.php`. Identical pattern in Joomla core's `com_content`/`com_contact` extension classes.
+
+---
+
+## 28. `ONLY_FULL_GROUP_BY` rejects HAVING on a column not in the SELECT/GROUP BY
+
+MySQL 5.7+ and MariaDB 10.x ship with `ONLY_FULL_GROUP_BY` in the default `sql_mode`. After a `GROUP BY`, a `HAVING` clause may **only** reference:
+
+1. Columns in the GROUP BY list
+2. Columns from the SELECT projection
+3. Aggregate function results
+
+A subquery like this will fatal with **"Unknown column 'i.reorder_threshold' in 'having clause'"** even though the column clearly exists in the inner table:
+
+```sql
+SELECT COUNT(*) FROM (
+  SELECT i.id, COALESCE(SUM(s.qty), 0) AS oh
+  FROM #__example_items i
+  LEFT JOIN #__example_stock s ON s.item_id = i.id
+  WHERE i.published = 1 AND i.reorder_threshold > 0
+  GROUP BY i.id
+  HAVING oh <= i.reorder_threshold       -- ← FATAL under ONLY_FULL_GROUP_BY
+) AS sub;
+```
+
+**Fix: pull the threshold column into the inner SELECT and reference it by alias:**
+
+```sql
+SELECT COUNT(*) FROM (
+  SELECT i.id, i.reorder_threshold AS rt, COALESCE(SUM(s.qty), 0) AS oh
+  FROM #__example_items i
+  LEFT JOIN #__example_stock s ON s.item_id = i.id
+  WHERE i.published = 1 AND i.reorder_threshold > 0
+  GROUP BY i.id, i.reorder_threshold
+  HAVING oh <= rt                         -- ← references the projected alias
+) AS sub;
+```
+
+**Alternative — when the aggregate is pre-computed in a subquery JOIN, drop the GROUP BY entirely and use a WHERE:**
+
+```php
+// Item list with low-stock filter — stk is already aggregated in the JOIN, so:
+$query->where($db->quoteName('a.reorder_threshold') . ' > 0')
+      ->where('COALESCE(stk.on_hand, 0) <= ' . $db->quoteName('a.reorder_threshold'));
+```
+
+This avoids the GROUP BY trap entirely.
+
+**Why this bites on prod but not dev:** XAMPP / MAMP default MySQL configs sometimes ship without `ONLY_FULL_GROUP_BY`, so the query runs locally but fatals on the production cPanel host where the strict mode is on. Always test against MySQL 8 / MariaDB 10.4+ with default `sql_mode` before shipping.
+
+**Reference:** `com_groundedinventory` v0.1.1 `Model/DashboardModel.php` (subquery alias fix) and `Model/ItemsModel.php` (drop-GROUP-BY fix). Hit live on groundedirrigation.ca 2026-06-24.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
