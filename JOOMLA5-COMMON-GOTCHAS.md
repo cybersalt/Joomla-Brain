@@ -894,6 +894,88 @@ This avoids the GROUP BY trap entirely.
 
 ---
 
+## 29. Custom form field types: form `type="..."` must match class case (PSR-4 case-sensitivity on Linux)
+
+**Symptom:** On Windows dev the form field renders correctly with all its options; on Linux production the same form renders a blank `<select>` (no options) — or, if there's no fallback class, throws a quiet "field type not found" notice and silently drops the field altogether. The dev-vs-prod divergence is the tell.
+
+**Root cause:** Joomla's `FormHelper::loadFieldType($type)` does `ucfirst($type)` then appends `Field` and walks the `addfieldprefix` namespaces. A `type="acymlist"` resolves to a class named `AcymlistField` (only the FIRST letter capitalised). If your file is `AcymListField.php` with class `AcymListField` (capital L mid-word), then:
+
+- **Windows dev:** PSR-4 autoloader case-insensitively matches `AcymlistField` against the file `AcymListField.php`. Class loads. Form works.
+- **Linux production:** PSR-4 strictly compares case. Autoloader looks for `AcymlistField.php`, doesn't find it, class doesn't load. Joomla's field-type lookup falls back to a generic empty list field or skips the field entirely.
+
+```xml
+<!-- ❌ BROKEN on Linux when class is AcymListField (capital L) -->
+<field name="list_id" type="acymlist" />
+
+<!-- ✅ WORKS — type case matches class case after ucfirst() -->
+<field name="list_id" type="acymList" />
+```
+
+```php
+// Class file: src/Field/AcymListField.php
+namespace ...\Field;
+class AcymListField extends ListField { ... }
+```
+
+**Two fix approaches:**
+
+1. **Keep readable CamelCase class names + match in form type** — `type="acymList"` resolves via `ucfirst('acymList')` → `'AcymList'` → `AcymListField`. Best for readability; my preferred option.
+2. **Rename class to first-letter-only-capitalised** — `class AcymlistField` (file `AcymlistField.php`) matches `type="acymlist"`. This is the convention Joomla core itself uses (`AccesslevelField`, `MediaField`, `RulesField`). Use when you want to match Joomla's own naming style.
+
+**Either works; just pick one and apply consistently.** The trap is the mismatch.
+
+**Validation step before shipping:** grep your form XMLs for `type="..."` attributes pointing at custom field classes, and verify each one's `ucfirst($type) . 'Field'` matches an actual file under your `Field/` directory with **exact case**. Sort each side and diff.
+
+**Test on Linux:** even if your dev machine is Windows, before tagging a release upload a build to a Linux test site (or use WSL2 + case-sensitive `case=strict` on the project directory via `fsutil.exe file setCaseSensitiveInfo`). The dev-vs-prod divergence is silent — there's no PHP warning on Linux either, just a missing class returning a missing field.
+
+**Reference:** cs-newsletter-vault v0.1.2 → v0.1.3 (2026-06-25). All 5 custom field classes (`AcymListField`, `LogSourceField`, `LogEraField`, `LogStatusField`, `MappingPickerField`) used CamelCase class names but lowercase form types. Worked perfectly on Windows dev — `AcyMailing list` dropdown was empty on first Linux production test. Fixed by switching the 7 form `type="..."` attributes across `mapping.xml`, `filter_mappings.xml`, `filter_log.xml`, `filter_errors.xml` to camelCase.
+
+**Companion rule:** the joomla-development skill's note `"Class name must be ViewerbuttonField (lowercase 'b') for type viewerbutton due to Joomla's field loading convention"` — same root cause, opposite direction. Form type and class name must agree on case.
+
+---
+
+## 30. Linking to `com_installer&view=manage` — Joomla 5.4+ dropped `filter_search=…`, must use `filter[search]=…`
+
+**Building a URL from your extension's code to the Extensions Manager pre-filtered? Use the bracket form, not the flat form.** Joomla 5.4 silently retired the legacy flat URL param `filter_search=…` for `com_installer&view=manage`. The bracket form `filter[search]=…` is the only param that populates the userstate now. The flat form still parses without error — Joomla just ignores it, falls back to whatever the session-stored filter was, and renders the list as if no URL filter was passed.
+
+**Symptom:** your postinstall message / dashboard "Open Extensions Manager" link drops the admin on the manage view with no filter applied. They see every installed extension and have to type the search themselves.
+
+**Won't show up on dev — silently passes:**
+- `filter_search=foo` produces an unfiltered list, but no PHP warning, no JS console error, no `Joomla.log`. Just an empty filter input and the full extensions list.
+- Used to work fine on Joomla 4.x and 5.0–5.3. Stopped working in **5.4 (released May 2026)**.
+- Symptom is indistinguishable from "the link wasn't clicked" when you're debugging at a distance.
+
+**Fix — use the bracket form:**
+
+```php
+// WRONG — does nothing on Joomla 5.4+
+$url = 'index.php?option=com_installer&view=manage&filter_search=Template+Integrity';
+
+// CORRECT — works on 5.4+ (and is the form Joomla itself emits from the filter form)
+$url = 'index.php?option=com_installer&view=manage&filter[search]=Template+Integrity';
+```
+
+You can write the brackets literally in an HTML href attribute; browsers URL-encode them on click. No special escaping needed beyond `htmlspecialchars` on the whole URL.
+
+**Combine with other bracket filters to narrow further.** The same bracket convention applies to every filter in the manage view dropdown:
+
+```php
+// Show only package-type extensions matching "Template Integrity"
+$url = 'index.php?option=com_installer&view=manage'
+     . '&filter[search]=Template+Integrity'
+     . '&filter[type]=package';
+```
+
+Useful for migration-script "click here to uninstall the legacy package" links — combining `filter[search]` with `filter[type]=package` isolates the parent package row (not its bundled component + plugins), and uninstalling the package cascade-removes the children automatically. The user sees one row, ticks one checkbox, one click to Uninstall.
+
+**`filter[search]=id:NN` does NOT work as a shortcut.** Older Joomla versions accepted an `id:NN` prefix in `filter_search` to filter by `extension_id`. That shortcut was removed; Joomla 5.4's `com_installer` manage filter is a plain LIKE %x% against `e.name` and `translated_name` only. There is no element-column search and no extension-id shortcut. If you need exactly-one-row precision, give the row a distinctive name first (e.g. via `UPDATE #__extensions SET name='…(safe to uninstall)…' WHERE element='…'`) and filter on that unique substring.
+
+**Note about `e.name` vs translated name visibility:** Joomla's manage view displays the *translated* name (looked up from the loaded language files for each extension) for the human-readable Name column, not the raw `e.name` field. If you update `e.name` in `#__extensions` to add an annotation like "(safe to uninstall)" but the extension's `<name>` was a language key, the annotation won't appear in the UI for that row — Text::_() returns the language file value instead. For packages, the `<name>` is usually literal text (not a key), so the annotation DOES show. For components and plugins, the `<name>` is usually a language key (`COM_FOO`, `PLG_BAR_BAZ`) and the annotation is invisible.
+
+**Reference:** cs-override-checker v2.5.0 migration card (June 2026). Took three iterations to nail down — first attempt used `filter_search=pkg_cstemplateintegrity` (returned 0 rows because Joomla 5.4 ignored the param entirely); second attempt tried `filter_search=id:NN` (worked on Joomla 5.0–5.3, ignored on 5.4); final form `filter[search]=Template+Integrity&filter[type]=package` works cleanly on Joomla 5.4.6 verified.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
