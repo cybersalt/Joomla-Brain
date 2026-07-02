@@ -15,6 +15,7 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-registration-redirect](https://github.com/cybersalt/cs-registration-redirect) (private) | System Plugin | Redirects users to a configurable URL after com_users registration completes — closes the gap that the per-menu-item-only stock redirect leaves | Joomla 4/5/6 native (SubscriberInterface, onAfterRoute, full update server) |
 | [cs-hikashop-login-redirect](https://github.com/cybersalt/cs-hikashop-login-redirect) (private) | System Plugin | Catches HikaShop's "404-instead-of-access-denied" response and redirects Guests to login with a `return=` parameter so they bounce back to the product after authenticating | Joomla 4/5/6 native (SubscriberInterface, **onError** hook, full update server) |
 | [cs-menu-item-conditions](https://github.com/cybersalt/cs-menu-item-conditions) (private) | System Plugin | Per-menu-item, per-page visibility — adds a Conditions tab to the menu item edit form with **picker dropdowns** for menu items / components / views (no manual ID entry) and a **URL match builder** with operator selector (Contains/Equals/Begins/Ends/Regex). Strips matching `<li>` blocks in `onAfterRender` so hover handlers and embedded scripts (Turnstile, reCAPTCHA, etc.) never initialize on hidden items. v1.0.0 first stable release 2026-05-06. | Joomla 5/6 native (SubscriberInterface, `onContentPrepareForm` for `com_menus.item`, custom `ListField` for views, subform with operators for URL rules, balanced-tag walker for nested submenus) |
+| [cs-edge-cache-marker](https://github.com/cybersalt/cs-edge-cache-marker) | System Plugin | Sets `cs_edit_session=1` cookie on `onUserAfterLogin` for editor-group users so upstream edge caches (Cloudflare, SiteGround NGINX, Fastly, Varnish, Bunny, NGINX proxy_cache) can bypass cached HTML for authenticated editor sessions while still serving cached HTML at edge speed to everyone else. Complement to per-cache purge plugins like cs-siteground-cache-for-joomla. v1.0.1 first stable release 2026-07-02. | Joomla 5/6 native (SubscriberInterface, `onUserAfterLogin`/`onUserAfterLogout`, group-scoped filter, session-cookie default, GPL-2 — public, update server live) |
 
 ### Packages
 | Repo | Type | Description | Status |
@@ -62,6 +63,7 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-registration-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-hikashop-login-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-menu-item-conditions | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-edge-cache-marker | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
