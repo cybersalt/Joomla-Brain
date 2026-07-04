@@ -1,4 +1,4 @@
-# Repositories Using Joomla Brain
+﻿# Repositories Using Joomla Brain
 
 This file tracks repositories that use the Joomla Brain as a submodule. Use these as references for working implementations.
 
@@ -31,9 +31,10 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-download-id-manager](https://github.com/cybersalt/cs-download-id-manager) | Package (com + plg_content) | Cybersalt Release Manager — membership-gated update access + authenticated downloads for pro extensions. Replaces traditional download IDs with installation-id + email-hash two-factor auth; ships as bundled package (component + content plugin); content plugin renders `{cs-download element="..."}` shortcodes as authenticated download buttons. Rebranded from "CS Update Access Manager" 2026-05-04. | Joomla 5/6 native (admin+site+API, custom fields, update server, content plugin, email notifications, domain blocking, end-to-end update flow proven in production) |
 | [cs-filter-by-meta](https://github.com/cybersalt/cs-filter-by-meta) | Component | Content meta audit tool | Joomla 5 |
 | [cs-talkback-to-joomla](https://github.com/cybersalt/cs-talkback-to-joomla) | Component | TalkBack to JComments migration tool | Joomla 5 native |
-| [cs-template-integrity](https://github.com/cybersalt/cs-template-integrity) | Package (com + plg_webservices) | Template-override integrity monitor — pairs your site with Claude to review every flagged override and apply patches you confirm. **v2.0 (2026-04-29)** added server-side scan automation (extension calls Anthropic directly with a saved API key) and chat-with-Claude on the session detail view (tool-use loop runs apply_fix / dismiss_override / dismiss_all server-side). Both manual (paste-prompt) and automated workflows ship together. | Joomla 5/6 native (Web Services API, ApiController, JsonapiView, access.xml + ACL gate, Anthropic Messages API + tool use, GPL-2 — public, update server live) |
+| [cs-template-integrity](https://github.com/cybersalt/cs-template-integrity) | Package (com + plg_webservices) | Template-override integrity monitor ��� pairs your site with Claude to review every flagged override and apply patches you confirm. **v2.0 (2026-04-29)** added server-side scan automation (extension calls Anthropic directly with a saved API key) and chat-with-Claude on the session detail view (tool-use loop runs apply_fix / dismiss_override / dismiss_all server-side). Both manual (paste-prompt) and automated workflows ship together. | Joomla 5/6 native (Web Services API, ApiController, JsonapiView, access.xml + ACL gate, Anthropic Messages API + tool use, GPL-2 — public, update server live) |
 | [CS-Chronoforms-Convert-to-Convert-Forms](https://github.com/cybersalt/CS-Chronoforms-Convert-to-Convert-Forms) | Component | CF6 to Convert Forms migration tool | Joomla 3 (legacy MVC) |
 | [cs-remove-sample-data](https://github.com/cybersalt/cs-remove-sample-data) | Component | Detects and removes items installed by Joomla's Blog and Multilingual sample-data plugins, including the `-{lang}`-suffixed variants the blog plugin creates on multilingual sites. Preview + per-item opt-out + per-column filters + activity log. **v1.0.0 (2026-05-28)** public release. Locale-aware alias reconstruction via `ApplicationHelper::stringURLSafe()` + same `.ini` file as the sample-data plugin; two-tier CSRF check (Joomla token + same-origin Referer/Origin fallback) for session-rotation resilience; inline JS/CSS in scan view to sidestep CDN caching of `/media/` assets. Passes security review with zero HIGH / zero MEDIUM. | Joomla 5/6 native (component, custom token endpoint, update server live) |
+| [Grounded-Inventory](https://github.com/GroundedIrrigation/Grounded-Inventory) | Package (com_groundedinventory) | Inventory management for Grounded Irrigation — items, stock, locations, suppliers, movements, jobs, receiving, CSV import, activity logs, dashboard. Built against the Brain with an exhaustive Joomla-Brain audit pass (gotchas #27/#28 originated here). Client repo (GroundedIrrigation org). | Joomla 6 native (admin component, custom fields, list filters, SQL install/update schema) |
 
 ### Modules
 | Repo | Type | Description | Status |
@@ -50,7 +51,7 @@ When next working on any of these extensions, add full Joomla update server supp
 |------|-------------|--------|---------------|--------------|----------------|
 | cs-userback-admin | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-autogallery | ❌ | ❌ | ❌ | ❌ | ✅ |
-| cs-joomla-router-tracer | ❌ | ❌ | ❌ | ✅ | ✅ |
+| cs-joomla-router-tracer | ❌ | ❌ | �� | ✅ | ✅ |
 | cs-browser-page-title | ❌ | ❌ | ❌ | ❌ | ✅ |
 | StageIt-5 | ❌ | ❌ | ✅ | ❌ | ✅ |
 | StageIt-6 | ❌ | ❌ | ✅ | ❌ | ✅ |
@@ -62,7 +63,7 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-siteground-cache-for-joomla | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-registration-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-hikashop-login-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
-| cs-menu-item-conditions | ❌ | ❌ | ❌ | ❌ | ✅ |
+| cs-menu-item-conditions | ❌ | ❌ | ❌ | ❌ | ��� |
 | cs-edge-cache-marker | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ---
