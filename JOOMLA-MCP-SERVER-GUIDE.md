@@ -204,6 +204,8 @@ public function onRegisterTools(RegisterToolsEvent $event): void
 
 This is what makes "free core + paid add-ons" work as separate plugins later — every add-on is just a system plugin that hooks the same event.
 
+**Publishing an add-on to an in-admin catalog.** If your MCP server has an in-admin "Browse Add-Ons" catalog (cs-mcp-for-j 1.6+ does, served from cs-Release-Manager's `api.catalog` endpoint), publishing a new add-on so it appears there requires more than just creating a Release Manager package — the catalog endpoint filters by a `catalog_slug` column AND reads display metadata (key / short_description / tier / target_extension / notes) from a `catalog_metadata` JSON column on the package row. Today neither field is exposed by the MCP `update_release_manager_package` tool nor by any PATCH route on the Web Services API, so the catalog registration is a direct DB UPDATE (one-shot PHP via cPanel UAPI is the working pattern). Walked end-to-end with worked example + canonical `catalog_metadata` shape + Pro vs Free differences in the Cybersalt vault doc `04.knowledge/cybersalt-com/mcp-for-j-catalog-publish-flow.md`.
+
 ---
 
 ## 8. The `AbstractTool` base — kill per-tool boilerplate
