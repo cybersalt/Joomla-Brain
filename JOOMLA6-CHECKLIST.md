@@ -102,7 +102,7 @@ Some language strings deprecated in 6.1.
 
 ## Joomla 6 Native Principles
 - [ ] Archive Handling: Use `Joomla\Archive\Archive` instead of PCLZip/ZipArchive
-- [ ] File Operations: Use `Joomla\CMS\Filesystem\File` and `Joomla\CMS\Filesystem\Folder`
+- [ ] File Operations: **PHP native** (`file_put_contents`, `mkdir`, `is_dir`, `unlink`, `copy`, `move_uploaded_file`) — or the framework-level `Joomla\Filesystem\File` / `Joomla\Filesystem\Folder` (NOT the `Joomla\CMS\Filesystem\*` CMS wrappers, which were deprecated in J4 and **removed entirely in J6**). See "Filesystem rule" section below for the field-tested pattern.
 - [ ] Database: Use `Joomla\Database\DatabaseInterface` and `Joomla\CMS\Factory::getDbo()`
 - [ ] HTTP Requests: Use `Joomla\CMS\Http\HttpFactory` instead of cURL/file_get_contents
 - [ ] Caching: Use `Joomla\CMS\Cache\CacheControllerFactory`
@@ -310,3 +310,86 @@ For custom buttons, use `customButton()` or `popupButton()`.
 - [`JOOMLA5-TESTING-GUIDE.md`](JOOMLA5-TESTING-GUIDE.md) — real-CMS test pattern; tests against real Joomla 6 catch deprecation issues automatically
 - [`JOOMLA5-COMMON-GOTCHAS.md`](JOOMLA5-COMMON-GOTCHAS.md) — the J5/J6 controller API differences and event-dispatching compat patterns
 - [`JOOMLA5-WEB-ASSETS-GUIDE.md`](JOOMLA5-WEB-ASSETS-GUIDE.md) — WebAssetManager replaces the deprecated `JHtml::_('script', ...)` pattern
+
+---
+
+## Field-tested fixes (real bugs hit on J6 testers)
+
+### Filesystem rule — never `use Joomla\CMS\Filesystem\*`
+
+**The bug** (cs-mcp-for-j tester on Joomla 6, 2026-06-17):
+
+```
+0 Class "Joomla\CMS\Filesystem\Folder" not found
+JROOT/administrator/components/com_csmcpforj/src/Model/CatalogModel.php:254
+```
+
+The CatalogModel was doing:
+
+```php
+use Joomla\CMS\Filesystem\Folder;
+// ...
+if (!is_dir($dir)) {
+    Folder::create($dir);
+}
+```
+
+That works fine on J5 (deprecation warnings only) but **fatal-errors on J6** with no backward-compat plugin. The entire `Joomla\CMS\Filesystem\*` namespace was removed from J6 core.
+
+**The fix** — replace with native PHP, which works identically on every Joomla version and every PHP 8.x:
+
+```php
+// Remove:  use Joomla\CMS\Filesystem\Folder;
+
+if (!is_dir($dir)) {
+    @mkdir($dir, 0755, true);
+}
+```
+
+The `@` is intentional: under parallel-request load two requests can both pass the `is_dir` check, race to `mkdir`, one of them gets EEXIST. The `@` suppresses the warning; the next call's `is_dir` check still confirms the dir exists.
+
+**Full search-replace pattern** for any extension being made J5+J6 native:
+
+| Old (CMS wrapper) | New (native PHP) |
+|---|---|
+| `Folder::create($dir)` | `@mkdir($dir, 0755, true)` |
+| `Folder::delete($dir)` | `rmdir($dir)` (empty) or recursive `RecursiveDirectoryIterator` loop |
+| `Folder::exists($dir)` | `is_dir($dir)` |
+| `Folder::files($dir)` | `scandir($dir)` + filter, or `glob($dir.'/*')` |
+| `File::write($p, $c)` | `file_put_contents($p, $c)` |
+| `File::delete($p)` | `@unlink($p)` |
+| `File::exists($p)` | `is_file($p)` |
+| `File::copy($a, $b)` | `copy($a, $b)` |
+| `File::move($a, $b)` | `rename($a, $b)` |
+| `File::upload($tmp, $dest, ...)` | `move_uploaded_file($tmp, $dest)` |
+| `File::makeSafe($name)` | Use `Joomla\Filesystem\File::makeSafe($name)` (framework, still present in J6) — or implement inline: `preg_replace('/[^A-Za-z0-9._-]/', '_', $name)` |
+| `Path::clean($p)` | Native: `str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $p)` and trim; or `Joomla\Filesystem\Path::clean($p)` (framework, J6-safe) |
+
+**Framework vs CMS — easy to confuse**:
+- `Joomla\Filesystem\*` (framework, in the `joomla/filesystem` composer package) — **still present in J6**. Safe to use.
+- `Joomla\CMS\Filesystem\*` (CMS wrapper, in `libraries/src/Filesystem/`) — **removed in J6**. Never use in new code.
+
+If a file imports `use Joomla\Filesystem\File;` (no `CMS\` in the path) it's the framework class and is fine. If it imports `use Joomla\CMS\Filesystem\File;` it's the CMS wrapper and will fatal on J6.
+
+### How to sweep an existing codebase
+
+Single grep that flags every J6 footgun:
+
+```bash
+grep -rn "Joomla\\\\CMS\\\\Filesystem\\\\\|CMSObject\|Joomla\\\\CMS\\\\Cli\\\\\|Joomla\\\\CMS\\\\Application\\\\CliApplication\|Joomla\\\\CMS\\\\Input\\\\Input" path/to/extension/
+```
+
+That catches: removed Filesystem classes, removed `CMSObject` base, removed CLI namespace, and the J6-moved Input class (`Joomla\Input\Input` is the J6 path).
+
+After fixing, verify by installing on a J6 site with the **"Behaviour - Backward Compatibility 6"** plugin **DISABLED** (it ships disabled by default). If the extension's pages render with no fatal errors, it's truly J6-native.
+
+### Config gotcha — `pro_recheck_seconds` / TTL fields that allow 0
+
+(Pattern hit in cs-mcp-for-j 2026-06-17, not J6-specific but worth recording.)
+
+If a config field lets the operator set `0` to mean "no throttle, do the expensive thing every request" (e.g. a Pro membership re-check that hits a remote API), and the form's `first="0"` bound allows it, the operator can accidentally leave it at 0 after testing and then wonder why the dashboard does a slow remote round-trip on every page load.
+
+**Mitigations**:
+- Set `first="60"` (or higher) in `config.xml` to forbid 0 via the form.
+- Or detect 0 in the helper and render a dashboard banner: *"Testing mode active: re-verifying on every page load."*
+- Or document the field clearly: *"Default 86400 (once a day). Set to 0 only for testing — slows the dashboard significantly."*
