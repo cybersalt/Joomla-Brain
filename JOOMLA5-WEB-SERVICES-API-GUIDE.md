@@ -4,18 +4,50 @@ Reference for shipping a JSON:API-compatible REST endpoint inside a Joomla 5+ co
 
 ---
 
-## Authentication: use `X-Joomla-Token`, NOT `Authorization: Bearer`
+## Authentication: prefer `X-Joomla-Token` — `Authorization: Bearer` is host-dependent
 
-This is the single most-broken-on-first-try part of Joomla's Web Services API. The token form everyone reaches for first does not work.
+This is the single most-broken-on-first-try part of Joomla's Web Services API. **Default to `X-Joomla-Token`. Bearer "works on my machine" but silently breaks on the most common Joomla hosting setup.**
 
 ```
-✅ X-Joomla-Token: <token>
+✅ X-Joomla-Token: <token>            ← always works
    Accept: application/vnd.api+json
 
-❌ Authorization: Bearer <token>     ← returns 401 Forbidden
+⚠️  Authorization: Bearer <token>     ← works on some hosts, 401 on others
 ```
 
-`Authorization: Bearer …` looks correct, matches every other REST API on the planet, and is wrong. Joomla's API auth plugin only reads `X-Joomla-Token`. If you write any HTTP client (PHP, JS, curl, Postman collection) that calls a Joomla API, hard-code the `X-Joomla-Token` header.
+### Why Bearer is unreliable
+
+`plg_api-authentication_token` (`plugins/api-authentication/token/src/Extension/Token.php`) **does** read the `Authorization: Bearer` header — its source code checks it first. So why does Bearer often fail?
+
+**Apache + PHP-FPM (the standard cPanel hosting stack) strips the `Authorization` header before PHP sees it.** Apache historically consumed `Authorization` for its own `mod_auth` flow and didn't pass it through unless you explicitly preserved it. The plugin's `$_SERVER['HTTP_AUTHORIZATION']` ends up empty → it falls through to `X-Joomla-Token` (which the client didn't send) → 401.
+
+The plugin has two fallbacks that *try* to recover:
+
+1. `REDIRECT_HTTP_AUTHORIZATION` — set by Apache when a rewrite happens. Only useful when the request goes through a RewriteRule.
+2. `apache_request_headers()` — only available under `apache2handler` SAPI, not under PHP-FPM (the modern default).
+
+So on PHP-FPM hosts: Apache strips Authorization, both fallbacks no-op, request 401s. Field-confirmed on `green.cybersalthosting.com` 2026-06-12 while bringing up `mcpfree.basicjoomla.com`.
+
+### Fix #1 (host operator): preserve Authorization in .htaccess
+
+Add to the `api/` directory's `.htaccess` (or the site root's, before the rewrite block that routes to `api/index.php`):
+
+```apache
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+```
+
+This copies the inbound `Authorization` header into a request-scoped environment variable. Apache's CGI/FCGI handler then exposes it as `$_SERVER['REDIRECT_HTTP_AUTHORIZATION']` — which the plugin already checks as its second fallback. Bearer now works.
+
+Idempotent — safe to apply on every install. cs-mcp-for-j's package postflight does exactly this (`Pkg_csmcpforjInstallerScript::ensureApiAuthorizationPreserved()`).
+
+### Fix #2 (client author): just use X-Joomla-Token
+
+Cheaper. The client always sets `X-Joomla-Token`; no host-side intervention needed. Joomla's plugin reads it directly via `$_SERVER['HTTP_X_JOOMLA_TOKEN']` which Apache + PHP-FPM never strip (custom `X-*` headers aren't special to anyone).
+
+If you're writing an HTTP client (PHP, JS, curl, Postman collection) that calls a Joomla API, **default to `X-Joomla-Token`. Use `Authorization: Bearer` only if the spec you're implementing requires it (e.g. MCP clients that expect Bearer authentication on their HTTP transports).**
 
 The token comes from **System → Users → My Profile → Joomla API Token** — click the eye icon to reveal it. Generated on first visit; can be regenerated.
 
@@ -299,6 +331,58 @@ private function sendJsonApi(array $payload, int $status = 200): void
     $app->close();
 }
 ```
+
+---
+
+## Joomla API token mint format (don't hand-roll, but if you must)
+
+If you need to mint a Joomla API token programmatically — for an installer postflight, a CLI test harness, a one-shot PHP script to bring up a brand-new site — copy this format EXACTLY. Burned ~15 minutes on a sloppy version 2026-06-12 because I trusted my memory instead of reading `plugins/api-authentication/token/src/Extension/Token.php`.
+
+The token system has two pieces: what's **stored on the user**, and what's **shown to the user** to paste into their client.
+
+### Stored: 3 rows in `#__user_profiles`
+
+| profile_key            | profile_value                       | notes                                |
+|------------------------|-------------------------------------|--------------------------------------|
+| `joomlatoken.token`    | `base64_encode(random_bytes(32))`   | RAW string. **No JSON wrapping.**    |
+| `joomlatoken.enabled`  | `1`                                 | string `'1'`, the plugin's `== 1` accepts this. |
+| `joomlatoken.algorithm`| `sha256`                            | `sha256` or `sha512`. Default `sha256`. |
+
+```sql
+DELETE FROM jos_user_profiles WHERE user_id=42 AND profile_key LIKE 'joomlatoken.%';
+INSERT INTO jos_user_profiles (user_id, profile_key, profile_value, ordering) VALUES
+  (42, 'joomlatoken.token',     'base64-of-32-random-bytes-here', 1),
+  (42, 'joomlatoken.enabled',   '1',                              2),
+  (42, 'joomlatoken.algorithm', 'sha256',                         3);
+```
+
+**Common mistake:** JSON-encoding the seed before INSERT. If you write `"yVHK..."` (with quotes) into `profile_value`, the plugin reads it back literally, base64-decodes the string-WITH-quotes, gets garbage bytes, and the HMAC compare fails. The stored value must be the raw base64 string, no quotes.
+
+### Shown: the display token
+
+```
+display_token = base64("$algorithm:$user_id:$hmac_hex")
+hmac_hex      = hash_hmac($algorithm, base64_decode($stored_seed), $site_secret)
+```
+
+Two non-obvious bits:
+
+1. **HMAC over the raw bytes, not the base64 string.** `base64_decode($stored_seed)` first, then HMAC. The plugin does exactly this on the verify side (`Token.php` line ~190: `$referenceTokenData = base64_decode($referenceTokenData);`).
+2. **`$site_secret` is `Factory::getApplication()->get('secret')` at runtime**, which Joomla loads from `configuration.php`'s `$secret`. If you're computing the display token outside the Joomla bootstrap, read `$cfg->secret` directly from `configuration.php`.
+
+Reference implementation: `cs-mcp-for-j/packages/plg_system_csmcpforj/src/Helper/JoomlatokenHelper.php`. Mirrors the plugin's format exactly. Use it instead of hand-rolling whenever Joomla is bootstrapped:
+
+```php
+use Cybersalt\Plugin\System\Csmcpforj\Helper\JoomlatokenHelper;
+
+$helper = new JoomlatokenHelper($db);
+$result = $helper->reset($userId);
+echo $result['display_token'];  // paste this into the client
+```
+
+### Quick verify
+
+After you mint, check `joomlatoken.token` looks like a 44-char base64 string with no leading/trailing quotes, hit a stock Joomla API endpoint (`GET /api/index.php/v1/users/me`) with both `X-Joomla-Token` and `Authorization: Bearer` to see whether the token is wrong vs. whether the host strips Authorization. If X-Joomla-Token 200s and Bearer 401s, the host is stripping Authorization (see preceding section).
 
 ---
 
