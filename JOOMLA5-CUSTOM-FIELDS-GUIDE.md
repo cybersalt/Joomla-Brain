@@ -491,6 +491,96 @@ $questions = json_decode($json, true);
 // $questions is an array of arrays, each containing the subform field values
 ```
 
+### Subform via Core `plg_fields_subform` (No Custom Plugin Needed) — 2026-05-25
+
+When you don't want to ship your own fields plugin and just need a repeatable group of fields on com_content articles, Joomla's bundled **`plg_fields_subform`** does this entirely via the field manager UI / Web Services API. The setup has multiple non-obvious gotchas worth documenting:
+
+#### Setup pattern (programmatic via cs-mcp-for-j v1.9+)
+
+```
+1. create_field_group(title="Changelog", context="com_content.article")
+   → returns group_id
+
+2. For each subfield (e.g. release_date, version, notes):
+   create_custom_field(name=..., type=calendar/text/editor,
+                       context="com_content.article", group_id=<group_id>)
+   update_custom_field(id=<new>, only_use_in_subform=1, assigned_cat_ids=[-1])
+
+3. create_custom_field(name="changelog", type="subform",
+                       context="com_content.article", group_id=<group_id>,
+                       fieldparams={
+                         "options": {
+                           "options0": {"customfield": "<sub1_id>", "render_values": "1"},
+                           "options1": {"customfield": "<sub2_id>", "render_values": "1"},
+                           "options2": {"customfield": "<sub3_id>", "render_values": "1"}
+                         },
+                         "multiple": "1", "min": "0", "max": "",
+                         "layout": "joomla.form.field.subform.repeatable-table",
+                         "buttons": {"add":"1","remove":"1","move":"1"},
+                         "groupByFieldset": "0"
+                       })
+   update_custom_field(id=<subform_id>, assigned_cat_ids=[<target_cat_id>])
+```
+
+Subfields scoped to `assigned_cat_ids=[-1]` (no category) + `only_use_in_subform=1` is what prevents them from rendering standalone on every article in the site. The Subform parent is the only field with a real category assignment.
+
+#### Storage format (writing values via `set_custom_field_value`)
+
+The Subform field's `#__fields_values.value` is JSON:
+
+```json
+{
+  "row0": {"field<sub1_id>": "...", "field<sub2_id>": "...", "field<sub3_id>": "..."},
+  "row1": {"field<sub1_id>": "...", "field<sub2_id>": "...", "field<sub3_id>": "..."}
+}
+```
+
+**Critical:** subfield value keys are `field<ID>` (e.g. `field1`, `field2`, `field3`) — NOT the subfield machine names like `release_date`. The `plg_fields_subform` plugin's `getSubfieldsFromField()` method renames `->name` to `field<ID>` for input-name-collision avoidance and stores the original machine name as `->fieldname`. Writing values keyed by machine names will land 9 empty rows in the admin UI (Joomla parses the JSON, sees N entries, creates N rows, but can't map the keys to any subfield).
+
+#### Reading values in a frontend template override
+
+The override at `templates/<template>/html/plg_fields_subform/subform.php` receives `$field->subform_rows` which is keyed by the subfield's **original `fieldname`** (machine name like `release_date`), with each value being a subfield object:
+
+```php
+foreach ($field->subform_rows as $subform_row) {
+    // Either access by fieldname-key directly:
+    $date    = $subform_row['release_date']->rawvalue ?? '';
+    $version = $subform_row['version']->rawvalue ?? '';
+    $notes   = $subform_row['notes']->rawvalue ?? '';
+
+    // Or iterate and look up by ->fieldname (NOT ->name — ->name is "fieldN"):
+    foreach ($subform_row as $sf) {
+        if ($sf->fieldname === 'release_date') { ... }
+    }
+}
+```
+
+**Use `->rawvalue` for editor / text** (raw stored value) and parse calendar `->rawvalue` yourself if you need full timezone control — the auto-rendered `->value` for calendar applies the site's display timezone, which can day-shift dates stored at midnight UTC (see next item).
+
+#### Calendar field timezone day-shift
+
+A Calendar subfield with `fieldparams.filter=SERVER_UTC` and `showtime=0` will silently day-shift values when the site's display timezone is offset from UTC. Storing `2025-08-18 00:00:00` displays as `2025-08-17` in any US timezone (UTC−5 to −8). Workaround: **store dates at noon UTC** (`12:00:00`) so any timezone within ±12h still renders the same day. Doesn't matter for date-only displays; matters for sort, which strcmp'd naturally either way.
+
+#### v1.8 → v1.9 field-name normalization gotcha (cs-mcp-for-j specific)
+
+cs-mcp-for-j v1.9's `create_custom_field` normalizes underscores in machine names to hyphens (passed `name=release_date`, stored `name=release-date`). v1.8 preserved underscores. `update_custom_field` doesn't expose `name` as updatable, so a v1.9-created field can't be renamed via API. **Make override code key-agnostic** by normalizing both forms:
+
+```php
+foreach ($field->subform_rows as $subform_row) {
+    $by_name = [];
+    foreach ($subform_row as $key => $sf) {
+        $raw  = is_string($key) ? $key : (string) ($sf->fieldname ?? '');
+        $norm = str_replace('-', '_', $raw);
+        $by_name[$norm] = $sf;
+    }
+    // now $by_name['release_date'] works on both v1.8 and v1.9 sites
+}
+```
+
+Reference deployment: VMT `transform` + ET `xeno` template overrides (2026-05-25 changelog refactor). Documented because the same override file is intended to ship across both v1.8 and v1.9 sites.
+
+---
+
 ### Trashed Fields Gotcha
 
 When a user deletes a custom field via the Joomla UI, it goes to **trash** (`state = -2`), not permanently deleted. Your `ensureField` check must account for this:
