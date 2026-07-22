@@ -976,6 +976,68 @@ Useful for migration-script "click here to uninstall the legacy package" links �
 
 ---
 
+## 31. Module `<namespace>` is only registered for the Dispatcher pattern — helper-entry modules need a defensive `require_once`
+
+**The trap:** You ship a Joomla 5/6 module with a `<namespace>` block in its manifest:
+
+```xml
+<namespace path="src">Cybersalt\Module\ArticleDuoSlider</namespace>
+```
+
+…but you keep the legacy helper-pattern entry-point file (`mod_article_duo_slider.php`) instead of migrating to the Dispatcher pattern (`services/provider.php` + `src/Dispatcher/Dispatcher.php`). The entry-point file references your helper class via a `use` alias:
+
+```php
+use Cybersalt\Module\ArticleDuoSlider\Helper\ArticlesHelper;
+
+$items = ArticlesHelper::getArticles($params, $app);  // boom
+```
+
+At runtime the page front-end blows up with:
+
+> `Class "Cybersalt\Module\ArticleDuoSlider\Helper\ArticlesHelper" not found`
+
+**Why this happens:** Joomla 5/6 reads `<namespace>` and registers the autoloader mapping at the moment it builds a `ModuleDispatcherFactory` for the module — i.e. as part of the Dispatcher dispatch path. If your module has no Dispatcher class (because you're using the helper pattern), Joomla falls back to including your entry-point file directly without ever calling the factory, so the namespace mapping never makes it into the autoloader registry. The `use` alias resolves to a class that nothing has registered, and class lookup fails.
+
+Joomla 6 surfaces this more aggressively than J5; some J5 builds happened to register the mapping via a different code path that J6 dropped. So the bug can sit dormant on J5 and explode on J6.
+
+**Symptoms:**
+- Module worked fine in a sibling cs-* extension that uses the Dispatcher pattern.
+- Module worked on the dev box if you happened to use J5.4 but blows up on J6.x.
+- Same module installed on a fresh site fails immediately; reinstalling doesn't help.
+- Error message points to a class FQN that exactly matches the file you can see at `modules/<mod>/src/Helper/<Class>.php`.
+
+**Fixes, in order of preference:**
+
+1. **Migrate to the Dispatcher pattern.** This is the modern J5/J6 idiom and resolves the issue completely. Add `services/provider.php` + `src/Dispatcher/Dispatcher.php`, remove the entry-point file. Joomla then routes through the dispatcher factory, which registers your namespace correctly. See [`JOOMLA5-MODULE-GUIDE.md`](JOOMLA5-MODULE-GUIDE.md#pattern-1-dispatcher-pattern-recommended).
+
+2. **Keep the helper entry-point, add a defensive `require_once`.** Quick fix when a Dispatcher migration isn't ready to ship. The entry-point file should be:
+
+   ```php
+   defined('_JEXEC') or die;
+
+   use Cybersalt\Module\YourModule\Helper\YourHelper;
+   use Joomla\CMS\Helper\ModuleHelper;
+
+   // Joomla 5/6 register a module's <namespace> mapping only for the Dispatcher
+   // pattern. With the legacy helper-entry pattern the autoloader may not have
+   // the namespace registered by the time this file runs — load the helper
+   // directly so the use-alias resolves either way.
+   if (!class_exists(YourHelper::class, false)) {
+       require_once __DIR__ . '/src/Helper/YourHelper.php';
+   }
+
+   $items = YourHelper::doYourThing($params, $app);
+   require ModuleHelper::getLayoutPath('mod_your_module', $params->get('layout', 'default'));
+   ```
+
+   The `class_exists(..., false)` form does NOT trigger autoload — it just checks if the class is already loaded, so the `require_once` only fires when the autoloader hasn't found the class yet.
+
+3. **Remove the `<namespace>` declaration entirely.** Regression — drops you back to pre-J5 patterns and loses you the IDE-friendly namespacing. Don't do this unless you have no other option.
+
+**Reference:** cs-article-duo-slider v2.0.0 — recovered the v1.8.6 source from `mark.cybersalt.com` (which used the legacy `ModArticleDuoSlider\Helper` without a manifest `<namespace>`), modernized it with `<namespace>Cybersalt\Module\ArticleDuoSlider</namespace>` but kept the helper entry-point. Test install on a J6 site immediately hit "Class not found" on the homepage. Applied Fix #2 (defensive `require_once`); Fix #1 (Dispatcher migration) tracked as a v2.1 follow-up.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
