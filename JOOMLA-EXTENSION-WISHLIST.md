@@ -8,6 +8,38 @@ When you find a new "every extension should do this" pattern, add it here. When 
 
 ---
 
+## 🏷️ Multi-Select Fields Use Fancy-Select Pill / Chip UI, Not a Plain List
+
+**Source:** Tim Davis, in chat 2026-06-26 during the cs-article-duo-slider build.
+
+**Pattern:** Any module / plugin / component config field that lets the admin pick **more than one** item from a known list — categories, articles, tags, user groups, menus, languages, access levels — must use Joomla's built-in fancy-select layout instead of a flat checkbox column or a basic multi-select dropdown:
+
+```xml
+<field
+    name="catids"
+    type="category"
+    extension="com_content"
+    multiple="true"
+    layout="joomla.form.field.list-fancy-select"
+    label="..."
+    description="..."
+/>
+```
+
+The `layout="joomla.form.field.list-fancy-select"` attribute swaps the default render for Joomla's Choices.js-backed picker, which gives you the modern "click → tag appears as a removable pill with an ×" UX, plus type-ahead search through the dropdown. Works on `type="category"`, `type="list"`, `type="sql"`, `type="contentlanguage"`, `type="usergroup"`, and any other inherently list-shaped field.
+
+**Why it matters:** Two reasons. (1) On sites with deep category trees or large article counts (think Mark Wagner's 150 Psalms or a news site with thousands of articles), a checkbox column is unscrollable and a basic multi-select is uneditable — Joomla 3-era admin UI. The fancy-select picker handles both densities gracefully. (2) Once an item is picked, the pill UI makes it obvious *which* items are currently selected — you can see five tag-pills sitting in the field at a glance, vs. having to scan a long checkbox list for the ticked entries.
+
+**Where to look:** Joomla core uses this on `com_content`'s tag and category fields in the article-edit form; `com_modules`'s menu-assignment list; `com_categories`'s parent-category field. If a Cybersalt extension surfaces a worse picker than Joomla core's article-edit screen, that's a regression.
+
+**Examples in the Cybersalt tree:**
+- `cs-article-duo-slider` (v2.0.0+, the `catids` field).
+- `cs-category-grid-display` (pre-existing — `parent_ids` and `category_ids` fields both use this layout).
+
+**When NOT to use:** Single-select picker (set `multiple="false"` or omit it) — the fancy-select is overkill for a one-item-only choice; the standard list dropdown is fine. Also skip for boolean toggles (`type="radio"`) and free-text inputs.
+
+---
+
 ## 🚦 Lock-Out Modal While a Long-Running Operation Is Running
 
 **Source:** Brent Cordis, suggested in chat 2026-04-29.
@@ -97,9 +129,10 @@ Joomla 5/6 uses BOTH `data-bs-theme="dark"` and `data-color-scheme="dark"` depen
 Other rules:
 
 1. **Extension logo at 56px**, left of the title, 1rem gap. Logo files install to `media/plg_*_<element>/` via a `<media folder="media" destination="plg_*_<element>">` block in the manifest; the card references them via `Uri::root() . 'media/...'`.
-2. **Action buttons in Cybersalt orange `#dc6b1a`** (the action-button orange from §12, NOT the brand orange `#FE9904` which is a logo accent — different role, different colour). All "go do something next" buttons (Open Plugin Settings, Open Menus, etc.) use the same orange so the eye knows where to click. White text on orange; underline tolerated. Specificity-bump the rules with `a.cs-cybersalt-btn` and `!important` on `color` since Joomla's admin link colour will otherwise win.
-3. **Footer line** below an `<hr>`: small text with the Plugin Settings button + vendor link + support URL. External links use `target="_blank" rel="noopener noreferrer"`.
-4. **Scope all CSS to `.cs-install-card`** — the postflight runs inside Joomla's installer frame; un-scoped styles would leak into the rest of admin.
+2. **Description paragraph below the title.** Render the same description text used in the plugin manager listing (`PLG_*_DESCRIPTION` / `COM_*_DESCRIPTION` / `MOD_*_DESCRIPTION` — whichever the manifest's `<description>` element references). Two lines maximum on a typical width; just enough that a new install knows what they just installed without navigating elsewhere. Allow HTML (the lang string may already contain `<strong>By <a ...>Cybersalt</a>.</strong>` style attribution prefixes) — use `Text::_(...)` not `htmlspecialchars()`. Added 2026-06-16 (Tim, while shipping cs-siteground-cache v2.2.0): the postflight card had a title and a button but no context, and Tim's first reaction installing his own plugin was "wait, what does this do again?"
+3. **Action buttons in Cybersalt orange `#dc6b1a`** (the action-button orange from §12, NOT the brand orange `#FE9904` which is a logo accent — different role, different colour). All "go do something next" buttons (Open Plugin Settings, Open Menus, etc.) use the same orange so the eye knows where to click. White text on orange; underline tolerated. Specificity-bump the rules with `a.cs-cybersalt-btn` and `!important` on `color` since Joomla's admin link colour will otherwise win.
+4. **Footer line** below an `<hr>`: small text with the Plugin Settings button + vendor link + support URL. External links use `target="_blank" rel="noopener noreferrer"`.
+5. **Scope all CSS to `.cs-install-card`** — the postflight runs inside Joomla's installer frame; un-scoped styles would leak into the rest of admin.
 
 Reference implementation: cs-menu-item-conditions v1.1.x — see `plg_system_csmenuconditions/script.php`. Confirmed-test failure mode: shipping a fixed-colour header (light or dark) and discovering the other mode looks broken — happened twice on cs-menu-item-conditions before the CSS-variable pattern landed.
 
