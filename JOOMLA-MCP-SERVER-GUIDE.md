@@ -75,6 +75,26 @@ Without this you have to tell users to configure their MCP client with a custom 
 
 ---
 
+## 4b. The "Accept normalization" pattern — Joomla 406s spec-compliant MCP clients
+
+**Field-tested fix (2026-07-13).** The MCP Streamable HTTP spec requires clients to send `Accept: application/json, text/event-stream` on every POST. Joomla's `ApiApplication::route()` negotiates the incoming Accept header against the formats registered on the route — by default only `application/vnd.api+json` — and when nothing matches it throws **406 "Could not match accept header"** before your API controller ever runs.
+
+Symptoms: the endpoint works from `curl` with `Accept: application/vnd.api+json`, but every current Claude Code / MCP SDK client fails with `Streamable HTTP error: Error POSTing to endpoint: Could not match accept header`. Configuring a custom `Accept` header on the client's server entry does NOT help — the MCP SDK transport overrides it with the spec value.
+
+Fix in the same `onAfterInitialise` route-scoped block as the Bearer translation (your endpoint only emits JSON, so the coercion is lossless):
+
+```php
+$accept = (string) $app->input->server->get('HTTP_ACCEPT', '', 'string');
+if (stripos($accept, 'application/vnd.api+json') === false) {
+    $app->input->server->set('HTTP_ACCEPT', 'application/vnd.api+json');
+    $_SERVER['HTTP_ACCEPT'] = 'application/vnd.api+json';
+}
+```
+
+Alternative (not chosen for cs-mcp-for-j): register the route with extra formats via the route vars (`'format' => ['application/vnd.api+json', 'application/json']`) so the negotiator can match `application/json`. The header rewrite was preferred because it lives in the system plugin next to the Bearer translation, needs no webservices-plugin change, and also covers clients sending only `text/event-stream`.
+
+---
+
 ## 5. CRITICAL: `ob_start()` guard at the controller
 
 Any stray PHP output during request processing — a notice, a warning, a third-party plugin's debug echo, a deprecation message — gets written to the response body **before** the JSON-RPC payload. MCP clients then fail to parse the response with "Unexpected token" because the response now starts with `Warning: ...` or similar.
