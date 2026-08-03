@@ -23,6 +23,28 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.7.0 — 2026-08-03
+
+Publishes the Regular Labs Sourcerer notes, written 2026-07-22 during a live J6 migration and left uncommitted until now. Every claim in it was reproduced on a real Joomla 6 site.
+
+### 🚀 New
+
+- **2026-08-03** — `REGULAR-LABS-SOURCERER-NOTES.md` (new top-level guide; authored 2026-07-22). Embedding PHP / JS / JSON-LD in Joomla content via Sourcerer `{source}` tags:
+  - **The mental model** — Sourcerer embeds **executable code that echoes output**; it does *not* "protect" an existing HTML tag. `{source}<script>…</script>{/source}` renders as visible code text. If you want an inline script to survive the WYSIWYG editor, rewrite it as a PHP `echo` or don't use Sourcerer for it.
+  - **The JSON-braces trap** — Sourcerer's tag characters *are* `{ }` (`tag_characters` = `{.}`), so a literal `{…}` JSON object inside `{source}` is silently **stripped**, at `prepare_content` 0 *and* 1. Build with `array()` + `json_encode()` instead; braces inside a string you *echo* are fine.
+  - **Email Cloaking corrupts `{source}` payloads at `prepare_content = 1`** — the core plugin rewrites a literal `name@domain.tld` before Sourcerer sees the block, causing an uncatchable parse failure. Fix with `chr(64)` and/or Prepare Content = Off.
+  - **`{source}` works with Prepare Content OFF** — and that is the better default for a code-carrying module, since per-item content plugins never touch the code.
+  - **Keep pasted PHP on a single line** — editors and content plugins turn newlines into `<br>`/`<p>` and break the PHP.
+  - **A WAF may 404 *scripted* POSTs containing `<?php`** while an identical browser save succeeds — so a Sourcerer code module can be fully automated *except* writing the `<?php` payload.
+  - **Canonical environment-proof JSON-LD pattern** — `Uri::root()` for absolute URLs (no staging→production find/replace, and it fixes the relative `url` Joomla's core Schema.org plugin emits), `chr(64)` for the email, single line, Prepare Content off.
+  - Plus a plugin-settings reference and a quick decision table (what you want to embed → what to do).
+
+### 📝 Docs
+
+- **2026-08-03** — `README.md` Guides section updated to list `REGULAR-LABS-SOURCERER-NOTES.md`.
+
+---
+
 ## v1.6.0 — 2026-08-03
 
 Adds the missing half of our Joomla 6 coverage — **migrating a live site to J6**, as opposed to building an extension for it — plus a colour-form-field reference and a language-file gotcha that can silently destroy an admin form. All of it measured on real 5.4.7 → 6.1.2 upgrades and a live J6 template, not read from release notes.
