@@ -171,3 +171,65 @@ This applies to any component-defined string that appears in Joomla's admin chro
 **Discovered in `cs-mcp-for-j` v1.10.2** when Tim noticed the catalog/dashboard submenu items rendered as raw constants in the sidebar from the Maximenu CK admin page. The strings were defined in `com_csmcpforj.ini` but not in `com_csmcpforj.sys.ini`. Adding the duplicates to `.sys.ini` fixed it instantly.
 
 **Don't move, duplicate**: don't *move* the strings from `.ini` to `.sys.ini` — the `.ini` is still where component-internal screens read translations from. Duplicate, even though it feels wrong. Joomla's translation lookup deduplicates on lookup, so the duplicate doesn't waste memory or cause conflicts.
+
+---
+
+## 8. One unbalanced HTML tag in a language string can destroy an entire admin form
+
+Field `label` and `description` strings are rendered as **raw HTML**, inside
+`<small class="form-text">`. There is no sanitiser and no validation. So an unclosed tag in a
+language string does not merely look wrong — it swallows the rest of the form.
+
+### The failure
+
+A template Options screen was missing three tabs, including Joomla's own **Menu Assignment**. Every
+obvious explanation was wrong: the manifest XML was valid, `xmllint` clean, all fieldsets correctly
+paired siblings of `<fields name="params">`.
+
+The cause was one character, in `en-GB.tpl_<slug>.ini`:
+
+```ini
+; the closing tag's ">" is HTML-entity-encoded, so the browser never sees </code>
+TPL_X_CAM_FX_MULTI_DESC="Type effect names, for example:<br /><code>simpleFade, scrollRight</code&gt;"
+```
+
+The browser therefore never closed that `<code>`, and everything after it — including every
+subsequent `<joomla-tab-element>` — was parsed as a **descendant** of it rather than a sibling.
+`joomla-tab` only builds tab buttons from its **direct children**, so all following tabs silently
+ceased to exist.
+
+### Why it is so hard to spot
+
+- The page renders. Nothing errors. There is no console warning.
+- The tabs that *do* work look completely normal.
+- The XML validates, so every "is my manifest correct?" check passes.
+- It looks **positional** — tabs always die after the fieldset containing the bad string, so moving
+  a fieldset earlier appears to "fix" it. It does not; the cutoff just moves.
+
+### Diagnosis: compare DOM children against the raw HTML
+
+```js
+const t = document.querySelector('joomla-tab');
+t.querySelectorAll(':scope > joomla-tab-element').length   // buttons are built from these
+document.querySelectorAll('joomla-tab-element').length      // vs how many exist at all
+```
+
+A mismatch means malformed markup swallowed the tail. Then walk `.parentElement` up from the first
+missing tab — it will land on the offending element (here: `code < small.form-text`, i.e. a field
+**description**).
+
+### The gate — one grep, add it to your release checklist
+
+```bash
+# entity-mangled closing tags
+grep -nE '</[a-zA-Z]+&gt;' language/**/*.ini        # must be empty
+
+# and balance the inline tags people actually use in descriptions
+for t in code b i strong em span p br; do
+  o=$(grep -o "<$t>" "$INI" | wc -l); c=$(grep -o "</$t>" "$INI" | wc -l)
+  [ "$o" = "$c" ] || echo "UNBALANCED <$t>: $o open / $c close"
+done
+```
+
+**And never judge an admin form by reading its XML.** Render the page and count the tabs — this
+manifest was flawless in exactly the case where three tabs did not exist.

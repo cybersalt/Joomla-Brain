@@ -23,6 +23,35 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.6.0 — 2026-08-03
+
+Adds the missing half of our Joomla 6 coverage — **migrating a live site to J6**, as opposed to building an extension for it — plus a colour-form-field reference and a language-file gotcha that can silently destroy an admin form. All of it measured on real 5.4.7 → 6.1.2 upgrades and a live J6 template, not read from release notes.
+
+### 🚀 New
+
+- **2026-08-03** — `JOOMLA6-UPGRADE-NOTES.md` (new top-level guide). The operational J5→J6 path:
+  - **The compat plugin gates the upgrade.** J6 refuses to install while `plg_behaviour_compat` is enabled, and disabling it on un-swept code breaks the site **while still on Joomla 5** — so it presents as "disabling a plugin broke my site". Sweep legacy APIs *first*, prove the views render with the shim off, *then* upgrade. Includes the J5-vs-J6 `classes_aliases` default table (ON vs OFF) that makes a J3 call latent on J5 and fatal on J6.
+  - **Deriving the alias map** from J5's own `plugins/behaviour/compat/.../classmap.php` (443 entries) — J5 ships `compat6` as a no-op placeholder with no classmap, so you cannot read it from the source side. Case-insensitive matching; the four genuinely-removed classes that need hand fixes.
+  - **A class sweep is not a clean bill of health** — the method-level J3-isms it exposes (`->getValue()`, `$x =& Factory::…`) and why `error.php` must be fixed first.
+  - **Orphan J3 components fatal every page** once the shim is off (a stray `com_search` router extending `JComponentRouterBase`). Repoint menu items rather than unpublishing them — and check `#__menu.component_id`, not just `link`.
+  - **`core:update` crashes on finalize** (`Installer::setAdapter()` too few arguments) on every run we have done. Recoverable — do NOT roll back. `maintenance:database --fix` contradicts itself in its own output; verify by SQL instead.
+  - **⚠️ `--fix` applies STRUCTURE ONLY.** 18 of 20 `6.*.sql` files carry data statements and none run, yet `#__schemas` is stamped current. Manual repair recipe in version order, `3 × ERROR 1060` as the expected signature, and the guided-tours gate.
+  - **⭐ The half-registered new-in-J6 extensions.** After the manual SQL pass, article and category views 500 (`Class "Joomla\Plugin\Fields\Note\Extension\Note" not found`) **while the home page stays 200** — empty `manifest_cache` on the inserted rows *plus* a stale `administrator/cache/autoload_psr4.php`. Both fixes, the two CLI-bootstrap traps (`session.cli` alias, `Installer::setDatabase()`), and the gate: curl an **article** view, because a home-page smoke test reports a clean site.
+  - Smaller traps: `cassiopeia_extended` as new core furniture that shifts template-count gates; **read `@deprecated` annotations from the target tree** (J5's `Factory.php` says "removed in 6.0", J6 says 7.0 — the methods survive); why "zero deprecations under maxdebug" is unachievable and the A/B delta that replaces it; the `updatesource` → `next` requirement.
+  - Closes with the whole upgrade as a 9-step ordered runbook.
+
+### 🔧 Improvements
+
+- **2026-08-03** — `JOOMLA5-UI-PATTERNS.md` § 13: *Colour form fields (`type="color"`)*. `ColorField` has exactly **three** layouts and the attribute is **`control`, not `view`** (`view=` is silently ignored). `control="simple"` renders a **fixed 12-swatch palette with no free colour entry** — a trap for brand colours. Alpha via `format="rgba"` (verified opacity slider). Why minicolors renders as a full-width bar with a detached swatch under BS5 and the CSS that fixes it. **Removing your last colour field removes jQuery from the page** — jQuery is not in J5/J6 core and minicolors is often the only thing pulling it in, so unrelated code that was free-riding on it starts throwing. The custom-FormField + Coloris pattern with a static asset guard, and why alpha should be stored as **8-digit hex `#rrggbbaa`** rather than `rgba()` (existing values stay byte-identical and `hex2rgb()`-style helpers keep working). Ends with the check nobody runs: proving a colour param reaches the page at all.
+- **2026-08-03** — `JOOMLA5-LANGUAGE-FILES-GOTCHAS.md` § 8: *One unbalanced HTML tag in a language string can destroy an entire admin form.* Field descriptions render as raw HTML with no sanitiser, so an entity-mangled `</code&gt;` leaves the element open and every following `<joomla-tab-element>` is parsed as its **descendant** — and `joomla-tab` only builds buttons from direct children. Three tabs vanished, including Joomla's own Menu Assignment, while the XML validated perfectly. Includes the DOM-vs-raw-HTML diagnosis and a one-grep release gate.
+
+### 📝 Docs
+
+- **2026-08-03** — `README.md` Guides/Checklists updated for `JOOMLA6-UPGRADE-NOTES.md` and the expanded UI-patterns / language-gotchas summaries.
+- **2026-08-03** — `JOOMLA6-CHECKLIST.md` gains a scope note at the top distinguishing "building an extension **for** J6" from "migrating a site **to** J6", pointing at the new guide.
+
+---
+
 ## v1.5.0 — 2026-06-24
 
 Adds a new top-level checklist for listing Cybersalt extensions on the **Joomla Extensions Directory**. Distilled from the live JED submission of cs-template-integrity v2.4.2 on Watch Me Work episode #343 (2026-06-24), particularly @Bredc's (Bjørn Ove Bremnes) live catches of the three first-timer gotchas that bite every developer on their first JED submission.

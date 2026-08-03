@@ -1,5 +1,10 @@
 # Joomla 6 Development Checklist
 
+> **Scope:** this file is about building an extension **for** Joomla 6 — APIs, manifests, the
+> deprecation matrix. For taking an existing **site** from Joomla 5 up to Joomla 6 (the CLI
+> preconditions, the `core:update` finalize crash, the data migrations `--fix` silently skips, and
+> the half-registered core extensions that follow), see **`JOOMLA6-UPGRADE-NOTES.md`**.
+
 ## Joomla 6.1 Release (2026-04-14)
 
 ### Technical Requirements

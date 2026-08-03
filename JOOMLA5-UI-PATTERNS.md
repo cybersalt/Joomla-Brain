@@ -403,3 +403,181 @@ Joomla's Atum admin uses `[data-bs-theme="dark"]` AND `[data-color-scheme="dark"
 ```
 
 Specificity: prefix the selector with `.btn` (so it's `.btn.csti-method-1-btn`, two classes) so it wins over Bootstrap's `.btn` defaults without needing `!important`.
+
+---
+
+## 13. Colour form fields (`type="color"`) — what Joomla actually gives you, and the jQuery it drags along
+
+Colour params look like a solved problem until you need one that is modern, or one with an alpha
+channel, or you have seventy of them on one screen. All of the following was measured on Joomla
+6.1.2.
+
+### 13.1 There are exactly three layouts, and the attribute is `control`, not `view`
+
+`Joomla\CMS\Form\Field\ColorField` picks its layout like this:
+
+```php
+if ($this->control === 'simple' || $this->control === 'slider') {
+    $this->layout .= '.' . $this->control;
+} else {
+    $this->layout .= '.advanced';
+}
+```
+
+| `control` | Renders | Free colour entry? | Alpha? |
+|---|---|---|---|
+| *(unset)* → `advanced` | **minicolors** — hex box + hue/saturation panel | yes | only with `format="rgba"` |
+| `simple` | `<joomla-field-simple-color>` — **a fixed palette of buttons** | no | no |
+| `slider` | minicolors, slider-style control | yes | with `format="rgba"` |
+
+**There is no native `<input type="color">` option.** If you want the OS colour picker, you have to
+build it.
+
+> **`control="simple"` is a trap for brand colours.** With no `colors` attribute it renders
+> **twelve fixed swatches** — `none, #049cdb, #46a546, #9d261d, #ffc40d, #f89406, #c3325f, #7a43b6,
+> #ffffff, #999999, #555555, #000000` — plus a hidden input, and **no way to type a value**. It is
+> for "pick a label colour", not "configure a template palette". You can pass your own list via
+> `colors="#aaa,#bbb"`, but it is still a closed set.
+>
+> Also note `view="simple"` does **nothing** — that attribute is silently ignored. Easy to "apply" a
+> change, see no error, and assume it worked.
+
+### 13.2 Alpha, the cheap way: `format="rgba"`
+
+```xml
+<field name="overlay" type="color" format="rgba" label="Overlay" />
+```
+
+Verified: the advanced layout sets `$alpha = true`, the placeholder becomes `rgba(0, 0, 0, 0.5)`,
+and minicolors renders a real opacity slider (`.minicolors-opacity-slider`). Zero new dependencies.
+
+**But check what consumes the value first.** Any helper that assumes a hex string will break on an
+`rgba(...)` value — the classic being a `hex2rgb()`-style function used to build
+`rgba(<?php echo hex2rgb($param); ?>, .65)`.
+
+### 13.3 minicolors is Bootstrap-3-era CSS in a Bootstrap-5 admin
+
+Out of the box in J6 the control renders badly: minicolors reserves a 26px left gutter and pins a
+20px swatch at `top:4px; left:4px`, sized for a BS3 input. Under BS5, `.form-control` is
+`width:100%` and taller, so you get a **full-width bar with the swatch sitting adrift of it**
+(measured: input 1074px wide). On a screen with dozens of colour params that is the entire page.
+
+If you keep minicolors, constrain it:
+
+```css
+.minicolors { display: inline-block !important; position: relative; width: auto !important; }
+.minicolors > input.minicolors-input {
+    width: 15rem !important;
+    padding-left: 2.6rem !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.minicolors .minicolors-swatch {
+    left: 4px; top: 50%; transform: translateY(-50%);
+    width: 1.75rem; height: 1.75rem;
+    border: 1px solid rgba(0,0,0,.25); border-radius: .25rem; overflow: hidden;
+}
+/* the swatch COLOUR must inherit the rounding, or the parent's checkerboard
+   background shows as a light fringe in the corner arcs */
+.minicolors .minicolors-swatch-color { inset: 0; border: 0; border-radius: inherit; }
+```
+
+**Verify by rect, not by eye:** `swatch.x >= input.x && swatch.right <= input.right` proves the
+swatch is inside the box.
+
+### 13.4 Removing the last colour field removes jQuery from the page
+
+**jQuery is not in Joomla 5/6 core.** minicolors is one of the few core things that still pulls it
+in, which means it is often the *only* reason jQuery exists on an admin screen — and anything else
+on that screen has been free-riding on it.
+
+Swap your colour fields for something else and you can get:
+
+```
+Uncaught Error: jQuery is not defined
+```
+
+...from completely unrelated code. In one real case the culprit was the extension's own legacy admin
+JS, loaded from a manifest description CDATA, which enhanced a control type that had been modernised
+away years earlier — it had **zero elements to act on** and had never thrown only because jQuery
+happened to be present.
+
+**Before changing a colour field's control type, grep the whole extension for `jQuery` — including
+the manifest XML's description CDATA, which nobody greps.** If you genuinely need jQuery, declare it
+(`$wa->useScript('jquery')`) rather than relying on another field to summon it.
+
+### 13.5 Bundling a modern picker (custom FormField + Coloris)
+
+When you need a modern picker *with* alpha, the working shape is a custom form field that ships the
+library with the extension:
+
+```php
+class JFormFieldColorpicker extends FormField
+{
+    protected $type = 'Colorpicker';
+
+    /** ~70 fields on a page - emit assets once per request, not once per field. */
+    protected static $assetsLoaded = false;
+
+    protected function getInput()
+    {
+        if (!static::$assetsLoaded) {
+            static::$assetsLoaded = true;
+            $doc->addStyleSheet($base . '/css/coloris.min.css');
+            $doc->addScript($base . '/js/coloris.min.js');
+            $doc->addScriptDeclaration('...Coloris({ el: ".cs-coloris", format: "hex", alpha: true, ... });');
+        }
+
+        return '<input type="text" class="form-control cs-coloris" data-coloris ... />';
+    }
+}
+```
+
+Points that matter:
+
+- **Static asset guard.** Without it a 70-field screen emits the library 70 times.
+- **Licence hygiene.** Coloris is MIT; keep the attribution banner in the minified files and ship
+  the `LICENSE` alongside. These end up inside commercial packages.
+- **Register the field path** — `addfieldpath="/templates/<slug>/fields"` (or `addfieldprefix` for
+  a component/library) or Joomla will not find the type.
+
+#### Store alpha as 8-digit hex (`#rrggbbaa`), not `rgba()`
+
+This is the decision that keeps the change cheap:
+
+| | 8-digit hex | `rgba()` string |
+|---|---|---|
+| Existing 6-digit values | unchanged, byte-identical | still valid, but formats now mixed |
+| Valid CSS | yes, everywhere modern | yes |
+| `hex2rgb()`-style helpers | **keep working** — they read chars 0-6 and ignore the alpha pair | **break** |
+| Migration needed | none | yes |
+
+Configure the picker with `format: 'hex'` + `alpha: true` and it emits 6-digit while opaque,
+8-digit only once transparency is applied.
+
+Round-trip proof from a live template: setting `#0093c980` rendered both the literal 8-digit hex
+*and* `rgba(0,147,201,0.76)` from the untouched `hex2rgb()` helper.
+
+### 13.6 The check nobody runs: do the colour params reach the page at all?
+
+A colour param can be completely inert and nothing in the admin will tell you — the field renders,
+saves and redisplays perfectly. Before investing in a nicer picker, prove the value actually lands:
+
+```bash
+# set a param to something unmistakable, then look for it in the rendered HTML
+# UPDATE #__template_styles SET params = JSON_SET(params, '$.bodybackground', '#ff0000')
+#  WHERE template = '<slug>';
+curl -s "<site>/?fresh=$(date +%s)" | grep -c 'ff0000'      # 0 = the params are dead
+```
+
+A related detector for one specific cause — a `<style>` block written in PHP string-concatenation
+syntax (`'.$this->params->get("x").'`) while *not* inside a PHP string, which ships the source
+verbatim as CSS:
+
+```bash
+curl -s "<site>/" | grep -c 'params->get('    # anything > 0 is broken
+```
+
+**If you fix that, fix the values in the same pass.** Params that never applied drift freely, and
+switching them on at whatever they happen to hold can change the design dramatically. Reconcile each
+one against what the site renders today first — if the extension also ships a "compiled" stylesheet
+carrying the same selectors, that file is your reconciliation source.
