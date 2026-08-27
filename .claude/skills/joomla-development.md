@@ -475,6 +475,7 @@ All PHP Web Design Joomla extensions MUST include translations for these 15 core
 | Greek | el-GR | Greece |
 | Czech | cs-CZ | Czech Republic |
 | Swedish | sv-SE | Sweden |
+| Persian | fa-IR | Iran |
 
 **Language File Structure per Language:**
 ```
