@@ -20,9 +20,39 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 - [ ] **Copy the timestamped zip to a clean version-only name** (`{ext_name}_v{version}.zip`) before uploading. The clean name is what goes on the GitHub release; the timestamped name stays local. Compute the SHA256 of the clean-named copy for `updates.xml`.
 - [ ] **Commit and push** to GitHub (manifests + CHANGELOGs + any code changes from the security review)
 - [ ] **Create GitHub release** with ONLY the clean-named zip attached (`{ext_name}_v{version}.zip`), tag `v{version}`. Do NOT upload the timestamped working copy — users should see one canonical zip per release, not two near-identical ones.
+- [ ] **Upload the zip to Cybersalt Release Manager — BEFORE creating the version record.** This is the step that actually ships the update to existing installs, and it is a manual one. Details in "Release Manager upload" below.
 - [ ] **Update updates.xml** with the new version, the new SHA256 of the released zip, and the GitHub release asset URL — only after the release exists, so the URL resolves
 - [ ] **Commit and push updates.xml** as a separate commit
 - [ ] **Test install/upgrade** on a live site
+
+## Release Manager upload
+
+> [!WARNING]
+> This step was **missing from this checklist until 2026-09-06**. Following the checklist exactly as written still shipped a **live broken update** on 2026-08-31. Don't skip it because GitHub already has the zip — GitHub is not what the sites are polling.
+
+### Check which update server the manifest actually names
+
+The manifest's `<updateservers>` block for these extensions points at **cs-release-manager on cybersalt.com**, *not* GitHub. An `updates.xml` sitting in the repo may be **vestigial — nothing polls it**.
+
+- [ ] **Read the manifest's `<updateservers>` URL before editing either file.** Whichever server it names is the one that matters; updating the other one is busywork that looks like progress.
+
+### Upload the zip BEFORE creating the version record
+
+- [ ] **Upload the clean-named zip** (`{ext_name}_v{version}.zip`) to `/home/csaltcom/public_html/media/com_csreleasemanager/downloads/<element>/`
+- [ ] **Only then** create or publish the Release Manager version record
+
+Order matters and the failure mode is invisible. Creating the version record first makes Release Manager **advertise a version whose download 404s** — a live broken update for every site polling for it. The record looks perfectly healthy in the Release Manager UI the whole time, so there is no symptom on our side at all.
+
+### Verify by actually downloading through the real update URL
+
+- [ ] **Download the file through the public update/download URL** and **compare its SHA256 against the built zip**
+
+**Do not trust that an upload returned HTTP 200.** That is not evidence the bytes landed (see the tooling gotchas below). Fetching the file back through the same URL a customer's site will use is the only confirmation that works.
+
+### Tooling gotchas
+
+- ⛔ **cPanel's `Fileman/upload_files` returns HTTP 200 while uploading nothing** when driven from .NET's `MultipartFormDataContent`. No error, no partial file — just a success response and an empty destination. **Use `curl.exe -F` instead**, which works first try.
+- **Git Bash mangles Unix paths in cPanel API calls.** MSYS path conversion turns `/home/...` into `C:/Program Files/Git/home/...`. Use **PowerShell**, or set **`MSYS_NO_PATHCONV=1`**.
 
 ## Review depth by bump type
 
@@ -60,3 +90,5 @@ If the extension calls any external HTTP API (Anthropic, OpenAI, etc.), verify t
 - Keep both CHANGELOG.md and CHANGELOG.html in sync
 - Use semantic versioning (MAJOR.MINOR.PATCH)
 - Don't commit the updated `updates.xml` until the GitHub release exists — pointing the update server at a 404 URL will break in-place upgrades for everyone running the previous version.
+- Same principle on the release server: the zip goes to Release Manager's `downloads/<element>/` folder **before** the version record is created or published. A version record without its file is a live broken update, and nothing in the UI shows it.
+- A successful-looking upload is not a successful upload. Verify by downloading through the real update URL and comparing SHA256.

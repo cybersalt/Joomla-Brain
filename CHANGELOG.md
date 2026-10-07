@@ -25,9 +25,14 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ## v1.8.0 — 2026-10-07
 
-Widens the custom-CSS standard from "every module" to **every extension with front-end output**, and adds quick styling options alongside it. Requested by Tim while planning cs-page-protector.
+Widens the custom-CSS standard from "every module" to **every extension with front-end output**, and adds quick styling options alongside it. Requested by Tim while planning cs-page-protector. Also publishes release-process lessons from 2026-09-06 that were sitting uncommitted.
+
+### 🚀 New
+- **2026-09-06** — `VERSION-BUMP-CHECKLIST.md`: new **Release Manager upload** section. Upload the zip to `downloads/<element>/` *before* creating the version record, verify by downloading through the real update URL and comparing SHA256, and check which update server the manifest actually names. This step was missing, and following the checklist as written shipped a live broken update on 2026-08-31. Tooling gotchas: cPanel `Fileman/upload_files` returns 200 while uploading nothing from .NET multipart (use `curl.exe -F`); Git Bash mangles `/home/...` paths (`MSYS_NO_PATHCONV=1`).
+- **2026-09-06** — `JED-SUBMISSION-CHECKLIST.md`: new **Naming: JED vs everywhere else** section (`CS ` short form on JED, full "Cybersalt" name everywhere else, deliberately).
 
 ### 🔧 Improvements
+- **2026-09-06** — `JED-SUBMISSION-CHECKLIST.md`: the JED Download URL is pinned to the extension **element** name and survives a listing rename or Release Manager tidy-up (silent 404); a required listing field can be saved empty with no warning. Both added to the ongoing-maintenance list. WMW #343 submission version corrected from 2.4.2 to **2.4.3**.
 - **2026-10-07** — `JOOMLA-EXTENSION-WISHLIST.md`: "Custom CSS Tab on Every Module" is now **"Styling Options + Custom CSS on Every Extension With Front-End Output"**. It covers modules, plugins and components; quick styling options (empty = inherit the template, built on CSS custom properties with fallbacks); Custom CSS loaded after the extension's stylesheet via WAM; scoping rules.
 - **2026-10-07** — `README.md` and `.claude/skills/joomla-development.md` updated to match.
 

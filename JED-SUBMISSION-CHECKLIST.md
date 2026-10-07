@@ -5,7 +5,10 @@ How to list a Cybersalt extension on the **Joomla Extensions Directory** (extens
 > [!IMPORTANT]
 > Use this checklist **alongside** `NEW-EXTENSION-CHECKLIST.md` and `VERSION-BUMP-CHECKLIST.md` — those cover making the extension; this covers getting it listed. JED submission is a public, slow review queue (1-4 weeks typical), so first-submission rejection costs real calendar time. Run the whole checklist before clicking Submit.
 
-This checklist was distilled from the **live JED submission of cs-template-integrity v2.4.2** on 2026-06-24 ([WMW #343](https://www.youtube.com/@Basicjoomla)) — particularly @Bredc's live catches of the three first-timer gotchas that every developer hits.
+This checklist was distilled from the **live JED submission of cs-template-integrity v2.4.3** on 2026-06-24 ([WMW #343](https://www.youtube.com/@Basicjoomla)) — particularly @Bredc's live catches of the three first-timer gotchas that every developer hits.
+
+> [!NOTE]
+> **Correction 2026-09-06.** Earlier revisions of this checklist recorded the WMW #343 submission as **v2.4.2**. The listing actually held **v2.4.3**. Corrected throughout; the same correction was made in the vault's JED account note.
 
 ---
 
@@ -43,7 +46,7 @@ When JED asks for a "Download URL," they mean the URL that directly serves the `
 - ❌ **Wrong** (this is the landing page):
   `https://www.cybersalt.com/extensions/template-integrity`
 - ✅ **Right** (this serves the file directly):
-  `https://www.cybersalt.com/index.php?option=com_csreleasemanager&task=api.userdownload&format=raw&element=pkg_cstemplateintegrity&version=2.4.2`
+  `https://www.cybersalt.com/index.php?option=com_csreleasemanager&task=api.userdownload&format=raw&element=pkg_cstemplateintegrity&version=2.4.3`
 
 Or, if you're hosting on GitHub Releases:
 
@@ -57,6 +60,19 @@ curl -sIL "<your-download-url>"
 ```
 
 If `Content-Type: text/html` comes back, you've handed JED the page URL. Fix and re-verify.
+
+#### The Download URL is pinned to the extension ELEMENT name ⚠️
+
+**Learned the hard way 2026-09-06.**
+
+That URL hard-codes `element=pkg_{something}`. JED stores it as a literal string and never derives it from anything else about the listing. Two consequences:
+
+- **Renaming a listing does not update the Download URL.** Only a JED team member can rename a listing, and when they do they change the *name* — nothing else. If the extension's element was renamed in the same breath (e.g. `pkg_cstemplateintegrity` → `pkg_csoverridechecker`), the listing keeps serving the old element and **silently 404s**.
+- **Tidying up the release server breaks it too.** Unpublishing or deleting the old element's package in Cybersalt Release Manager kills a Download URL that still points at it. The listing page looks completely healthy; only the download is dead.
+
+Note that JED listings can hold **more than one** element-bearing URL — on the Override Checker listing both `download_link` and `download_integration_url` carried the stale element. Fix every one of them.
+
+- [ ] **Re-test the listing's Download URL after any rename, element change, or Release Manager tidy-up** — not just after a version bump. `curl -sIL` and confirm `HTTP 200` + `Content-Type: application/zip`, and sanity-check the byte count against the built zip.
 
 ### 3. Logo URL is fully qualified — no `/images/...` shortcuts ⚠️
 
@@ -82,6 +98,10 @@ The submission form has dedicated fields for these and JED's review will bounce 
 - [ ] **License page link** — where the license text lives. Standard:
   - `https://www.gnu.org/licenses/old-licenses/gpl-2.0.html` (canonical GPL-2.0 text)
   - Or a local copy: `https://github.com/cybersalt/{repo}/blob/main/LICENSE`
+
+**A required field can still be saved empty — and nothing tells you** *(learned 2026-09-06)*. "License page on your site" sat **blank** on the Override Checker listing from the original submission right through to 2026-09-06, plausibly a contributor to that listing still being pending months later. The form accepted the submission, and no reviewer message named it.
+
+- [ ] **Walk every required field on the listing and confirm it's populated** — don't rely on the form to enforce it, and don't limit remediation to the items a reviewer happened to mention. A reviewer's message is a sample of what's wrong, not the complete list.
 
 ### 5. Screenshots are current
 
@@ -150,13 +170,40 @@ The Cybersalt account is owned by `tim@cybersalt.com`.
 
 ---
 
+## Naming: JED vs everywhere else
+
+**Decided 2026-09-06 (Tim).** Cybersalt extensions carry two names on purpose. This is a
+convention, not drift — do not "fix" one to match the other.
+
+| Surface | Form | Example |
+|---|---|---|
+| **JED listing** | `CS ` abbreviated prefix | **CS Override Checker** |
+| Extension display name, manifest `<name>`, package title | Full company name | **Cybersalt Override Checker** |
+| Documentation, cybersalt.com storefront, README | Full company name | **Cybersalt Override Checker** |
+
+**Why.** JED is a dense directory sitting next to hundreds of other extensions, where a long vendor
+prefix costs scan-ability and eats the character budget in listing titles and search results. The
+abbreviation keeps the Cybersalt association without the length. Everywhere the reader has already
+arrived at something of ours — the admin UI, the docs, the storefront — the full company name does
+useful branding work.
+
+**Practical consequences:**
+
+- The JED listing name will NOT match the manifest `<name>`. That is expected.
+- **Only a JED team member can rename a listing** — the owner cannot do it from the contributor
+  dashboard. If a listing goes up under the wrong form, open a support ticket. This is what happened
+  with `LISTING-9G6LE3B554`, renamed from *CS Template Integrity* to *CS Override Checker* on
+  2026-09-02.
+- **A rename does not touch the version or download URL.** After any rename, re-check that the
+  listing still advertises the current release and that the download URL resolves.
+
 ## The submission form — field-by-field
 
 Walk this in order. Tab between fields; don't lose the form.
 
 | Field | What to enter | Source / gotcha |
 |---|---|---|
-| Extension name | Match the manifest `<name>` and repo name | Don't rename mid-submission — Bjørn floated alternatives during WMW #343; project doc decision stays. |
+| Extension name | **Use the `CS ` short form** — see "Naming: JED vs everywhere else" below | Deliberately NOT the manifest `<name>`. JED gets `CS Override Checker`; the extension, docs and storefront keep `Cybersalt Override Checker`. |
 | Tagline / short description | ≤200 chars, marketing hook | Lead with the **recognition trigger** (e.g. *"the smarter Joomla override checker"*) not the product name |
 | Long description | Markdown, ~500-2000 chars | Converted from the cybersalt.com article HTML |
 | Version | Current release version (e.g. `2.4.2`) | Match manifest exactly |
@@ -202,9 +249,12 @@ JED listings can go stale fast if the extension is moving and the listing isn't.
 
 - **On every release**, update the listing's:
   - Version number
+  - **Download URL(s)** — and actually re-test them (see step 2). There may be more than one field carrying the element name.
   - Long description (if features changed)
   - Screenshots (if UI changed)
   - Compatibility (if Joomla version range changed)
+- **After any listing rename, element rename, or Release Manager tidy-up**, re-test the Download URL specifically. None of those events update it, and a stale element 404s with no visible symptom on the listing. See step 2.
+- **Periodically re-walk the required fields** (support link, license page link, etc.). One of them being quietly empty is a plausible reason for a listing to sit in the queue with nobody explaining why. See step 4.
 - **Reviewer can mark a listing "needs updating"** if it goes too long without a refresh. Monthly check is enough.
 
 ---
@@ -225,4 +275,5 @@ JED listings can go stale fast if the extension is moving and the listing isn't.
 
 ## History
 
-- **2026-06-24** — Initial version. Distilled from the live JED submission of cs-template-integrity v2.4.2 on WMW #343 (Watch Me Work episode #343), particularly @Bredc's live catches of the three first-timer gotchas (download URL vs page URL, full-URL logo requirement, support + license link required fields).
+- **2026-06-24** — Initial version. Distilled from the live JED submission of cs-template-integrity v2.4.3 on WMW #343 (Watch Me Work episode #343), particularly @Bredc's live catches of the three first-timer gotchas (download URL vs page URL, full-URL logo requirement, support + license link required fields).
+- **2026-09-06** — Corrected the WMW #343 submission version from 2.4.2 to **2.4.3** (the figure was wrong here and in the vault's JED account note). Added two gotchas from bringing the Override Checker listing current: **the Download URL is pinned to the extension element name** and survives a listing rename (step 2), and **a required field can be saved empty** — the License page link had been blank since submission (step 4). Both echoed in "Ongoing — keeping the JED listing fresh".
