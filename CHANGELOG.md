@@ -23,6 +23,17 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.8.0 — 2026-10-07
+
+Widens the custom-CSS standard from "every module" to **every extension with front-end output**, and adds quick styling options alongside it. Requested by Tim while planning cs-page-protector.
+
+### 🔧 Improvements
+- **2026-10-07** — `JOOMLA-EXTENSION-WISHLIST.md`: "Custom CSS Tab on Every Module" is now **"Styling Options + Custom CSS on Every Extension With Front-End Output"**. It covers modules, plugins and components; quick styling options (empty = inherit the template, built on CSS custom properties with fallbacks); Custom CSS loaded after the extension's stylesheet via WAM; scoping rules.
+- **2026-10-07** — `README.md` and `.claude/skills/joomla-development.md` updated to match.
+
+### 🔍 Security
+- **2026-10-07** — `JOOMLA5-MODULE-GUIDE.md`: the Dispatcher's custom-CSS sample passed the field straight to `addInlineStyle()`, which writes verbatim. Any module copied from it had a stored-XSS sink (`</style><script>…`). The sample now neutralises `<` / `>` first, per the cs-smart-pagenav finding (2026-08-14). **Check existing modules built from the old sample.**
+
 ## v1.7.0 — 2026-08-03
 
 Publishes the Regular Labs Sourcerer notes, written 2026-07-22 during a live J6 migration and left uncommitted until now. Every claim in it was reproduced on a real Joomla 6 site.

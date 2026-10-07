@@ -12,10 +12,13 @@ You are assisting with Joomla extension development. Apply these patterns, conve
   - Components: `admin/language/en-GB/com_componentname.ini` + `.sys.ini`
 - Files MUST be UTF-8 WITHOUT BOM
 
-### 2. Custom CSS Tab (All Modules)
-- Every module MUST include a Custom CSS fieldset/tab
-- Use `filter="raw"` in XML field definition
-- Scope CSS using unique ID: `mod-modulename-{$module->id}`
+### 2. Styling Tab + Custom CSS (Every Extension With Front-End Output)
+- Every module, plugin and component that renders on the front end MUST include a Styling fieldset/tab
+- Quick styling options (border, colours, radius, alignment, etc.), all empty by default = inherit the template; output only the CSS variables the admin set
+- Custom CSS textarea with `filter="raw"`, added via WAM after the extension's own stylesheet
+- **Escape at output:** `str_replace(['<', '>'], ['\00003c ', '\00003e '], $css)` before `addInlineStyle()`; it writes verbatim, so unescaped input is an XSS sink
+- Scope CSS: modules use `mod-modulename-{$module->id}`; components/plugins use their own wrapper class
+- Full spec: `JOOMLA-EXTENSION-WISHLIST.md` → Styling Options + Custom CSS
 
 ### 3. Changelogs (CRITICAL: 2 FILES!)
 **⚠️ ALWAYS update BOTH files together - they must stay in sync:**

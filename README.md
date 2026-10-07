@@ -89,7 +89,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - Build scripts: Use 7-Zip only (see `PACKAGE-BUILD-NOTES.md`)
 - Versioning: Use semantic versioning (MAJOR.MINOR.PATCH)
 - **Language files are MANDATORY**: All extensions MUST use Joomla's core language system — see Language System below
-- **Custom CSS tab**: All modules MUST include a dedicated tab/fieldset for custom CSS — see `JOOMLA5-MODULE-GUIDE.md`
+- **Styling tab + Custom CSS**: Every extension with front-end output (modules, plugins, components) MUST include a Styling tab with quick styling options (empty = inherit the template) and a Custom CSS box, escaped at output. See `JOOMLA-EXTENSION-WISHLIST.md` and `JOOMLA5-MODULE-GUIDE.md`
 - **Enhanced multi-select fields**: Use `layout="joomla.form.field.list-fancy-select"` — see `JOOMLA5-MODULE-GUIDE.md`
 
 ## Language System Requirements

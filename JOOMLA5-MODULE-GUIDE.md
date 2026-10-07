@@ -288,10 +288,14 @@ class Dispatcher extends AbstractModuleDispatcher
             ['mod_example']
         );
 
-        // Add custom CSS if provided (scoped to module instance)
+        // Add custom CSS if provided (scoped to module instance).
+        // addInlineStyle() writes verbatim, so neutralise < and > or
+        // "</style><script>" in the box becomes stored XSS.
         if (!empty($data['customCss'])) {
+            $css = str_replace(['<', '>'], ['\00003c ', '\00003e '], $data['customCss']);
+
             $wa->addInlineStyle(
-                '#mod-example-' . $data['moduleId'] . ' { ' . $data['customCss'] . ' }'
+                '#mod-example-' . $data['moduleId'] . ' { ' . $css . ' }'
             );
         }
     }
@@ -637,7 +641,7 @@ The `showon` attribute hides/shows fields based on other field values:
 
 ### Custom CSS Field (REQUIRED)
 
-Per Joomla Brain standards, all modules MUST include a custom CSS field:
+Per Joomla Brain standards, all modules (and every other extension with front-end output, see `JOOMLA-EXTENSION-WISHLIST.md` → Styling Options + Custom CSS) MUST include a custom CSS field, escaped at output as shown in the Dispatcher example above:
 
 ```xml
 <field

@@ -255,11 +255,34 @@ Both `CHANGELOG.md` and `CHANGELOG.html` exist, use the emoji section convention
 
 ---
 
-## 🧹 Custom CSS Tab on Every Module
+## 🧹 Styling Options + Custom CSS on Every Extension With Front-End Output
 
-**Already documented in:** [[JOOMLA5-MODULE-GUIDE.md]] + [[README.md]] → Best Practices Overview.
+**Source:** Tim Davis. Originally "every module"; widened 2026-10-07 while planning cs-page-protector ([issue #11](https://github.com/cybersalt/cs-page-protector/issues/11)): *"part of my dream for every Joomla extension."*
 
-Every module ships with a dedicated tab/fieldset for custom CSS so end-users can tweak presentation without forking the module's stylesheet. Cross-references the cache-busting `filemtime()` pattern from [[JOOMLA5-UI-PATTERNS.md]].
+**Applies to:** every module, plugin and component that renders **anything on the front end**, such as a module's output, a content plugin's markup, or a component view like a challenge page. Admin-only extensions are exempt.
+
+**Two parts, both in a dedicated *Styling* tab/fieldset:**
+
+1. **Quick styling options** for people who don't write CSS: the obvious visual knobs for that extension (border colour/width/radius, background, text and heading colour, button colours, alignment, max width, padding, shadow on/off).
+   - Every option is **empty by default = inherit from the template.** Installing the extension must not restyle anything.
+   - Build the stylesheet on **CSS custom properties with fallbacks** (`border-color: var(--cs-ext-card-border, rgba(127,127,127,.35))`) and output **only the variables the admin actually set**. That keeps the output tiny and leaves the template in charge by default.
+   - Use typed fields (Joomla's `color` field, number + unit), never free text put into CSS.
+   - If the extension embeds a third-party widget that exposes CSS variables (e.g. ALTCHA's `--altcha-*`), set those rather than overriding its internals.
+2. **Custom CSS textarea** (`custom_css`, `filter="raw"`) for everything else.
+   - Add it through the Web Asset Manager as an inline style that **depends on the extension's own stylesheet asset**, so it always loads after it and wins.
+   - Scope it: modules to `#mod-<name>-{id}` per [[JOOMLA5-MODULE-GUIDE.md]]; components and plugins to their own wrapper class.
+
+**⚠️ Escape at the output sink, every time.** `addInlineStyle()` writes its content into `<style>` **verbatim**, and the field must be `filter="raw"` (a `string` filter mangles selectors like `a[href^="x"]`). Unescaped, `</style><script>…</script>` in the box runs on every page that renders it. Found in cs-smart-pagenav, 2026-08-14:
+
+```php
+$css = str_replace(['<', '>'], ['\00003c ', '\00003e '], $css);
+```
+
+CSS never legitimately needs literal angle brackets, and the escape form still works inside `content:` strings.
+
+**Why it matters:** site owners want an extension to look like *their* site. Without these, the only options are a template override or forking the stylesheet, and both break on the next update. Quick options cover most requests without a support ticket; the CSS box covers the rest.
+
+**Also:** dark mode. Either offer dark-mode colour options or say in the field help that Custom CSS can use `@media (prefers-color-scheme: dark)`. Cross-references the cache-busting `filemtime()` pattern from [[JOOMLA5-UI-PATTERNS.md]].
 
 ---
 
