@@ -1038,6 +1038,30 @@ Joomla 6 surfaces this more aggressively than J5; some J5 builds happened to reg
 
 ---
 
+## 32. Post-install card shows the description twice: clear the installer's `message` in `postflight()`
+
+**Symptom:** after installing an extension with a Cybersalt post-install card, the installer results page shows two blue boxes: Joomla's own (the manifest `<description>`, in bold) and then our card, which leads with the same description string. The same sentence appears twice.
+
+**Cause:** `InstallerAdapter::install()` sets `$installer->message` to `Text::_(<description>)` first thing, and `com_installer` renders it as its own `alert-info` box. Everything the install script echoes is captured separately as `extension_message` and rendered as a second box. Postflight runs at the very end of `install()` (also `update()`, which goes through `install()`, and `discover_install()`), and `InstallModel` only reads `$installer->message` *after* that.
+
+**Fix:** blank the message at the end of `postflight()`, only on the routes where the card is rendered:
+
+```php
+$this->renderInstallCard($type);
+
+// Joomla shows the manifest description in its own box above the card,
+// and the card already leads with it.
+$adapter->getParent()->message = '';
+```
+
+`default_message.php` only renders the box `if ($message1)`, so an empty string removes it. The card's own `alert-info` box stays. For a package, `getParent()` is the top-level installer, so this clears the package's box. Child extensions are installed through their own `Installer` instances and don't add boxes of their own.
+
+The manifest `<description>` still shows in Extensions: Manage and anywhere else Joomla lists the extension. Only the install results page changes.
+
+**Reference:** cs-page-protector #2 (2026-10-08). Checked against the Joomla 6.1 installer source; the same code has been in place since Joomla 4, so J5 behaves the same. **Every Cybersalt extension with a post-install card has this duplicate**, so add the line whenever you next touch one.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)

@@ -133,6 +133,7 @@ Other rules:
 3. **Action buttons in Cybersalt orange `#dc6b1a`** (the action-button orange from §12, NOT the brand orange `#FE9904` which is a logo accent — different role, different colour). All "go do something next" buttons (Open Plugin Settings, Open Menus, etc.) use the same orange so the eye knows where to click. White text on orange; underline tolerated. Specificity-bump the rules with `a.cs-cybersalt-btn` and `!important` on `color` since Joomla's admin link colour will otherwise win.
 4. **Footer line** below an `<hr>`: small text with the Plugin Settings button + vendor link + support URL. External links use `target="_blank" rel="noopener noreferrer"`.
 5. **Scope all CSS to `.cs-install-card`** — the postflight runs inside Joomla's installer frame; un-scoped styles would leak into the rest of admin.
+6. **Clear Joomla's own description box** with `$adapter->getParent()->message = '';` at the end of `postflight()`. Otherwise Joomla renders the manifest description in a box above the card, and the card repeats it (rule 2). See [[JOOMLA5-COMMON-GOTCHAS.md]] #32. Added 2026-10-08 (cs-page-protector #2).
 
 Reference implementation: cs-menu-item-conditions v1.1.x — see `plg_system_csmenuconditions/script.php`. Confirmed-test failure mode: shipping a fixed-colour header (light or dark) and discovering the other mode looks broken — happened twice on cs-menu-item-conditions before the CSS-variable pattern landed.
 

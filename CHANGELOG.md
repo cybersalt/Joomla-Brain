@@ -23,6 +23,16 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## v1.9.0 — 2026-10-08
+
+### 🚀 New
+- **2026-10-08** — `JOOMLA5-COMMON-GOTCHAS.md` #32: the post-install card repeats the description Joomla already shows in its own box. Fix: `$adapter->getParent()->message = '';` at the end of `postflight()`. Applies to every Cybersalt extension with a card. Found in cs-page-protector #2.
+
+### 🔧 Improvements
+- **2026-10-08** — `JOOMLA-EXTENSION-WISHLIST.md`: post-install card rule 6, clear Joomla's own description box.
+
+---
+
 ## v1.8.0 — 2026-10-07
 
 Widens the custom-CSS standard from "every module" to **every extension with front-end output**, and adds quick styling options alongside it. Requested by Tim while planning cs-page-protector. Also publishes release-process lessons from 2026-09-06 that were sitting uncommitted.
