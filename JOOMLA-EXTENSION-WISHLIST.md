@@ -139,7 +139,7 @@ Reference implementation: cs-menu-item-conditions v1.1.x — see `plg_system_csm
 
 ---
 
-## 🌐 15-Language Coverage From Day One
+## 🌐 17-Language Coverage
 
 **Already documented in:** [[README.md]] → Language System Requirements.
 
@@ -291,7 +291,7 @@ CSS never legitimately needs literal angle brackets, and the escape form still w
 
 **Already documented in:** [[JOOMLA5-COMMON-GOTCHAS.md]] + [[JOOMLA5-WEB-ASSETS-GUIDE.md]].
 
-Every admin UI is tested with Joomla's dark template active before release. No hard-coded `bg-light` or `btn-outline-*` classes that disappear on dark backgrounds. Pair colours come from CSS variables (`--bs-body-bg`, `--bs-body-color`, etc.) rather than fixed hex values.
+Every admin UI is tested with Joomla's dark template active before release. No hard-coded `bg-light`, and no `btn-outline-*` on action buttons, since both disappear on dark backgrounds. (Yes/No radio toggles using core's `btn-group-yesno` are fine, see §"Yes/No Toggles Should Be Green and Red".) Pair colours come from CSS variables (`--bs-body-bg`, `--bs-body-color`, etc.) rather than fixed hex values.
 
 ---
 
@@ -438,36 +438,35 @@ The same rule applies to URL-pattern fields: prefer an operator selector (Contai
 
 **Source:** Tim Davis, suggested while building cs-download-id-manager (May 2026).
 
-**Pattern:** Joomla's default `type="radio"` with `class="btn-group"` (the Yes/No pill toggle pattern) renders as plain blue or grey buttons. Override the styling so:
+**Pattern:** A Yes/No `type="radio"` field with plain `class="btn-group"` renders **both** options as grey `btn-outline-secondary` buttons, shades of grey that Tim doesn't like. Joomla core already has the fix built in: add `btn-group-yesno` to the class.
 
-1. **Selected "Yes"** → solid green button (`bg-success`).
-2. **Selected "No"** → solid red button (`bg-danger`).
-3. **Unselected** → outline only (`btn-outline-success` / `btn-outline-danger` so the option is still visible at low contrast).
-
-Apply this consistently to **every** Yes/No field across admin and frontend.
-
-**Why it matters:** Toggle states should be readable at a glance. Blue-on-blue or grey-on-grey forces the user to read the labels to know which is selected. Green = "this is on / will happen", red = "this is off / will not happen" matches universal traffic-light intuition.
-
-**Implementation pointer:** In `media/css/admin.css` (or per-extension equivalent):
-
-```css
-/* Joomla 5 renders radio btn-groups with .btn-group > input + label */
-.btn-group > input[type="radio"]:checked + label.btn-outline-secondary[data-value="1"],
-.btn-group > input[type="radio"]:checked + label[for$="0"] {
-    /* Yes when selected */
-    background-color: var(--bs-success);
-    border-color: var(--bs-success);
-    color: #fff;
-}
-.btn-group > input[type="radio"]:checked + label[for$="1"] {
-    /* No when selected */
-    background-color: var(--bs-danger);
-    border-color: var(--bs-danger);
-    color: #fff;
-}
+```xml
+<field name="enabled" type="radio" default="1"
+       class="btn-group btn-group-yesno"
+       label="..." description="...">
+    <option value="1">JYES</option>
+    <option value="0">JNO</option>
+</field>
 ```
 
-**Caveat:** Joomla's exact rendering differs between J3, J4, and J5. Test in dark mode too. The simplest robust approach is to inspect a rendered Yes/No field on a real install and adjust the selectors accordingly. Document the working CSS in [[JOOMLA5-UI-PATTERNS.md]] once stable.
+Joomla's own layout (`layouts/joomla/form/field/radio/buttons.php`, J4/J5/J6) then assigns per option:
+
+| Option value | Class | Selected | Not selected |
+|---|---|---|---|
+| `1` (Yes) | `btn btn-outline-success` | solid green | green outline |
+| `0` (No) | `btn btn-outline-danger` | solid red | red outline |
+| anything else | `btn btn-outline-secondary` | solid grey | grey outline |
+
+Apply this to **every** Yes/No field across admin and frontend. No custom CSS needed.
+
+**Why it matters:** Toggle states should be readable at a glance. Grey-on-grey forces the user to read the labels to know which is selected. Green = "this is on / will happen", red = "this is off / will not happen" matches universal traffic-light intuition.
+
+**Not a conflict with the dark-mode rule.** The dark-mode rule bans `btn-outline-*` on **action buttons** (Save, Run, Open…), where an outline reads as low-contrast. Yes/No toggles are different: these outline classes come from Joomla core, the selected option fills solid, and Atum styles them in both light and dark mode.
+
+**Gotchas:**
+- The colour keys off the option **value**, not its label: `1` must be Yes and `0` must be No. A three-way radio (e.g. "Use global") gives the extra option grey, which is correct.
+- Custom per-option `class=""` on an `<option>` overrides the core colour; don't set one.
+- Before 2026-10-15 this rule shipped a hand-written CSS override instead. Delete that CSS from any extension that has it; the core class does the job.
 
 ---
 

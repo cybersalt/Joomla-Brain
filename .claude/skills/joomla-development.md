@@ -459,7 +459,7 @@ KEY_WITH_HTML="Click <strong>here</strong> to continue"
 
 ### Core Languages (MANDATORY for all extensions)
 
-All PHP Web Design Joomla extensions MUST include translations for these 15 core languages:
+All PHP Web Design Joomla extensions MUST include translations for these 17 core languages:
 
 | Language | Code | Notes |
 |----------|------|-------|
@@ -478,6 +478,8 @@ All PHP Web Design Joomla extensions MUST include translations for these 15 core
 | Greek | el-GR | Greece |
 | Czech | cs-CZ | Czech Republic |
 | Swedish | sv-SE | Sweden |
+| Norwegian Bokmål | nb-NO | Norway (added 2026-05-06) |
+| Norwegian Nynorsk | nn-NO | Norway (added 2026-05-06) |
 
 **Language File Structure per Language:**
 ```
@@ -494,7 +496,7 @@ language/{lang-code}/
     <language tag="en-GB">language/en-GB/en-GB.com_example.sys.ini</language>
     <language tag="nl-NL">language/nl-NL/nl-NL.com_example.ini</language>
     <language tag="nl-NL">language/nl-NL/nl-NL.com_example.sys.ini</language>
-    <!-- ... repeat for all 15 languages ... -->
+    <!-- ... repeat for all 17 languages ... -->
 </languages>
 ```
 

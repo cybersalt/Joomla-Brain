@@ -55,7 +55,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - `NEW-EXTENSION-CHECKLIST.md`: Creating a new Cybersalt extension
 - `VERSION-BUMP-CHECKLIST.md`: Version bump steps
 - `JED-SUBMISSION-CHECKLIST.md`: Listing an extension on the Joomla Extensions Directory — pre-flight asset audit (current screenshots, full-URL logos, fresh CHANGELOGs), the three first-timer gotchas (download URL vs page URL, full-URL logo, support + license links required), field-by-field walkthrough of the JED submission form, category selection, post-submission monitoring. Distilled from the live cs-template-integrity v2.4.2 JED submission on WMW #343 (2026-06-24).
-- `JOOMLA-EXTENSION-WISHLIST.md`: Cross-cutting UX/operational expectations every Cybersalt extension should ship with — lock-out modals during long-running operations, API-billing transparency, automated lint+test on every push, plus consolidated reminders for post-install card, 15-language coverage, security baseline, dark-mode testing
+- `JOOMLA-EXTENSION-WISHLIST.md`: Cross-cutting UX/operational expectations every Cybersalt extension should ship with — lock-out modals during long-running operations, API-billing transparency, automated lint+test on every push, plus consolidated reminders for post-install card, 17-language coverage, security baseline, dark-mode testing
 
 ### Build & Packaging
 - `PACKAGE-BUILD-NOTES.md`: Package naming, 7-Zip requirement, common errors
@@ -129,8 +129,10 @@ echo Text::plural('MOD_EXAMPLE_N_ITEMS', $n); // Plural forms
 
 ### Core Languages (MANDATORY for all PHP Web Design extensions)
 
-All extensions MUST include translations for these 15 core languages:
-en-GB, nl-NL, de-DE, es-ES, fr-FR, it-IT, pt-BR, ru-RU, pl-PL, ja-JP, zh-CN, tr-TR, el-GR, cs-CZ, sv-SE
+All extensions MUST include translations for these 17 core languages:
+en-GB, nl-NL, de-DE, es-ES, fr-FR, it-IT, pt-BR, ru-RU, pl-PL, ja-JP, zh-CN, tr-TR, el-GR, cs-CZ, sv-SE, nb-NO, nn-NO
+
+(Norwegian Bokmål `nb-NO` and Nynorsk `nn-NO` were added 2026-05-06. The 16 non-en-GB files go in at the first published release, not during test builds; see `JOOMLA-EXTENSION-WISHLIST.md`.)
 
 ## Changelog Format
 
