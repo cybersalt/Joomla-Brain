@@ -1062,6 +1062,27 @@ The manifest `<description>` still shows in Extensions: Manage and anywhere else
 
 ---
 
+## 33. `insertObject()` / `updateObject()` take the object by reference: never pass `(object) [...]`
+
+**Symptom:** a code path that writes a row always fails, with something like `Error: Joomla\Database\Mysqli\MysqliDriver::insertObject(): Argument #2 ($object) could not be passed by reference`. If a broad `catch (\Throwable)` sits above it, all you see is a generic error. Lint (`php -l`) passes, because the method is resolved at runtime.
+
+**Cause:** the signature is `insertObject($table, &$object, $key = null)` (and `updateObject($table, &$object, $key, $nulls = false)`), so it can write the new auto-increment id back onto the object. PHP 8 throws a hard `Error` when a by-reference parameter gets a cast expression or literal instead of a variable. (A function call's return value only raises a notice; a cast does not get that leniency.)
+
+```php
+// WRONG: fatal Error on every call
+$db->insertObject('#__my_table', (object) ['a' => 1]);
+
+// RIGHT
+$row = (object) ['a' => 1];
+$db->insertObject('#__my_table', $row);
+```
+
+**How it shipped:** MCP for Joomla 2.9.0 test builds wrote the OAuth authorization code and the issued tokens this way, so every OAuth sign-in died with `server_error`. The pre-login checks never reached either insert, and the end-to-end test was still pending when the test build went out. Found by a tester (Stefan Gagner, 2026-10-16). Grep for it: `->(insertObject|updateObject)\([^,]+,\s*\(object\)`.
+
+**Lesson:** any code path that only runs after a human step (login, Allow click, payment) needs that step done once before a build leaves the building. Also see the Standard Log Viewer rule in JOOMLA-EXTENSION-WISHLIST.md: a catch-all that returns a generic error must log the exception first.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
