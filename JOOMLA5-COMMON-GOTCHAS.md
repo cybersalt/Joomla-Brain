@@ -1083,6 +1083,31 @@ $db->insertObject('#__my_table', $row);
 
 ---
 
+## 34. Saving custom fields through your own controller lets users write read-only fields
+
+**Symptom:** none visible. A field an admin set to read-only for a group (no `core.edit.value` on it) renders disabled, but a crafted POST to `jform[com_fields][<name>]` still saves a value.
+
+**Cause:** `FormController::save()` dispatches `onContentNormaliseRequestData` before `validate()`, and that is where the core Fields system plugin removes values for disabled custom fields. A custom controller that calls `$model->getForm()` + `$model->validate()` + `$model->save()` directly skips that event. `Form::validate()`'s own "disabled field present in the request" guard does not catch it: it checks `$input->exists($name)` with group `null`, but the value lives at `com_fields.<name>`.
+
+**Fix:** before `validate()`:
+
+```php
+use Joomla\CMS\Event\Model\NormaliseRequestDataEvent;
+
+$object = (object) $data;
+$app->getDispatcher()->dispatch('onContentNormaliseRequestData', new NormaliseRequestDataEvent(
+    'onContentNormaliseRequestData',
+    ['context' => 'com_example.item', 'data' => $object, 'subject' => $form]
+));
+$data = (array) $object;
+```
+
+Also strip disabled **subform subfields** yourself (`$field->loadSubForm()->getFieldset()`, then remove their keys from every row), because the plugin only handles top-level fields.
+
+**How it was found:** a security review of cs-job-forms (front-end crew forms, 2026-10-16). Grep your extensions for `->validate($form` outside a `FormController` subclass.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
