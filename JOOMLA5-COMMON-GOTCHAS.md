@@ -1108,6 +1108,78 @@ Also strip disabled **subform subfields** yourself (`$field->loadSubForm()->getF
 
 ---
 
+## 35. `BaseController` has no `getApplication()` on Joomla 6: use `$this->app`
+
+**Symptom:** a controller task dies with Joomla's error page, and with debug on the message is just `0`; the stack trace points at the line calling `$this->getApplication()`.
+
+**Cause:** `Joomla\CMS\MVC\Controller\BaseController` keeps the application in `protected $app` (set in the constructor) and has no `getApplication()` method (checked on 6.1.4). Views, models, plugins and dispatchers do have one, so it's easy to assume controllers do too.
+
+**Fix:** `$this->app->getLanguage()`, `$this->app->getIdentity()` etc. inside controllers.
+
+**How it was found:** cs-extension-manager's quick-icon JSON task (2026-10-20).
+
+---
+
+## 36. Atum sets `.modal-body` padding to 0: Bootstrap modals with text need it back
+
+**Symptom:** a Bootstrap 5 modal in the admin has its body text, progress bars and lists flush against the modal's left and right edges. The header and footer look normal.
+
+**Cause:** Atum zeroes `.modal-body` padding because Joomla's own modals mostly wrap iframes.
+
+**Fix:** give your modals a class and restore it in your stylesheet:
+
+```css
+.myext-modal .modal-body { padding: 1rem 1.25rem; }
+```
+
+**How it was found:** cs-extension-manager's install queue modal (2026-10-20).
+
+---
+
+## 37. Bootstrap ignores `modal.hide()` while the modal is still fading in
+
+**Symptom:** a "Working…" modal shown just before a fast `fetch()` stays on screen after the request finishes, and (with `data-bs-backdrop="static"`) blocks clicks on the next modal, e.g. a confirm dialog opened from the response.
+
+**Cause:** Bootstrap 5's `Modal.hide()` returns early while `_isTransitioning` is true. A request that answers in under ~300 ms calls `hide()` during the show animation, and the call is dropped.
+
+**Fix:** remember the state you want and settle it when the show finishes:
+
+```js
+function busy() {
+  el.dataset.want = 'shown';
+  el.addEventListener('shown.bs.modal', () => { if (el.dataset.want === 'hidden') { modal.hide(); } }, { once: true });
+  modal.show();
+}
+function unbusy() { el.dataset.want = 'hidden'; modal.hide(); }
+```
+
+**How it was found:** cs-extension-manager's uninstall flow, where the dependants confirm couldn't be clicked (2026-10-20).
+
+---
+
+## 38. Quick icon with a live count: `ajaxurl` and the JSON mod_quickicon expects
+
+**Pattern:** a quickicon plugin can show a number badge that is fetched *after* the Home Dashboard renders, so a slow remote check never slows the dashboard. Add `'ajaxurl'` to the icon array:
+
+```php
+$result[] = [[
+    'link'    => 'index.php?option=com_example',
+    'image'   => 'icon-puzzle-piece',
+    'name'    => 'PLG_QUICKICON_EXAMPLE_CHECKING',   // shown until the request answers
+    'ajaxurl' => Uri::base() . 'index.php?option=com_example&task=items.quickicon&' . Session::getFormToken() . '=1',
+    'id'      => 'plg_quickicon_example',
+    'group'   => 'MOD_QUICKICON_MAINTENANCE',
+]];
+```
+
+`media/mod_quickicon/js/quickicon.js` GETs that URL and expects `{"data": {"amount": 3, "name": "3 updates", "sronly": "3 updates waiting."}}`: `amount` goes in the badge, `name` replaces the label, `sronly` is the screen-reader text. Anything else (HTML error page, missing `data`) gives the icon the `error` class. Check the token with `$this->checkToken('get', false)` and answer JSON on failure.
+
+**Note:** core's script colours the icon with `response.data > 0`, which compares an object to 0 and is always false, so the icon always gets `success` (green) however big the count is (6.1.4).
+
+**How it was found:** cs-extension-manager's "N Cybersalt updates" icon (2026-10-20).
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)

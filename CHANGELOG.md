@@ -23,6 +23,13 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 
 ---
 
+## Unreleased
+
+### 🚀 New
+- **2026-10-20** — `JOOMLA5-COMMON-GOTCHAS.md` #35–#38, found building cs-extension-manager: #35 `BaseController` has no `getApplication()` on Joomla 6 (use `$this->app`); #36 Atum zeroes `.modal-body` padding; #37 Bootstrap drops `modal.hide()` while the modal is still fading in (fix with a wanted-state flag settled on `shown.bs.modal`); #38 quick icons with a live count via `ajaxurl` and the `{data: {amount, name, sronly}}` JSON mod_quickicon expects.
+
+---
+
 ## v1.9.0 — 2026-10-08
 
 ### 🚀 New
