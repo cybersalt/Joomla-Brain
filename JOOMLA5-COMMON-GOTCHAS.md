@@ -1180,6 +1180,51 @@ $result[] = [[
 
 ---
 
+## 39. Joomla 6 removed the `usergroup` form field type
+
+A `type="usergroup"` field renders an **empty** picker on Joomla 6 (no error), because `UsergroupField` is gone. Use
+`type="usergrouplist"`, which works on 5 and 6.
+
+**How it was found:** cs-edge-cache-marker 1.0.1's "Editor user groups" setting showed no groups on J6 (2026-10-20).
+
+---
+
+## 40. Switcher fields: list `JNO` before `JYES`
+
+In a `switcher`/radio field, put the `0`/JNO option **first**. With JYES first, "Yes" is drawn as the off state.
+
+**How it was found:** cs-articles-module-maxxed's "Email Super Users" switch (2026-10-20).
+
+---
+
+## 41. Removing a workflow hides the articles still in its stages
+
+The admin Articles list **INNER JOINs** `#__workflow_associations` → stages. If an extension deletes a workflow (e.g.
+the Blog sample data's), any article still associated with one of its stages disappears from the list. It isn't
+deleted, it's just invisible. Re-associate articles to the default workflow's stage before deleting a workflow.
+
+**How it was found:** cs-remove-sample-data 1.0.1 (2026-10-20).
+
+---
+
+## 42. Joomla 5.x ships no captcha plugin
+
+reCAPTCHA was removed in **5.0** (and uninstalled on update from before 5.0.1). **6.0** has none either; **6.1** adds the
+Proof-of-Work captcha. An extension that relies on "the site's captcha" does nothing on J5/J6.0 until a third-party
+captcha is installed, so detect that and warn about it.
+
+**How it was found:** cs-page-protector (2026-10-20).
+
+---
+
+## 43. Uninstalling a component deletes its media folder, including user uploads stored there
+
+Joomla removes `media/<component>/` on uninstall. Cybersalt Release Manager keeps its uploaded release zips in
+`media/com_csreleasemanager/downloads/`, so an uninstall deletes every stored release. Warn in the uninstall
+flow, or store uploads outside `media/`.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)

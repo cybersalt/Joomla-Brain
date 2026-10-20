@@ -173,6 +173,58 @@ Required so users can in-admin upgrade after they install from JED.
 
 See `JOOMLA5-UPDATE-SERVER-GUIDE.md` for the full spec.
 
+### 9. JED rules learned in the 2026-10-20 overnight pass ⚠️
+
+From preparing six extensions plus ~30 MCP for J add-ons. The sources are cited in the vault note
+`04.knowledge/jed-addon-and-paid-listing-rules.md`.
+
+**Pacing and add-ons**
+- **At most 3 submissions can be pending at once.** Bulk submission needs JED approval (support ticket after the first 3).
+- **An "Ext. Specific Addon" can't be listed until its parent extension is approved.** On the form, tick
+  Plugin + "E Ext. Specific Addon". Category: the parent's *Extension Specific* subcategory if one exists, otherwise
+  *Extensions Specific Non-sorted*. One listing per add-on is accepted; JED doesn't want packs.
+
+**Names** (the manifest `<name>` must match the listing)
+- Banned: the reserved words **module / plugin / template / component / extension**, **"Free"**, version
+  numbers, company names. JED Checker flags all of them.
+- **"Joomla" in a name needs an OSM trademark licence.** Use "for J" or similar.
+- Add-on names end with **"for <parent>"**.
+- JED Checker's 40-character "too long" warning counts the whole translated name, including `System - `.
+- The part before the first ` - ` must be the plugin group.
+- A **package** `<name>` should be a language key (`PKG_X`). JED Checker derives the sys.ini filename
+  from `<name>` and ignores `<packagename>`.
+- Language keys must be **UPPERCASE**, or the name doesn't resolve and the naming rule fails.
+
+**Manifest and files**
+- Remove `<targetplatform>` and `<php_minimum>` from **install** manifests; JED Checker flags both.
+  They belong in the update XML.
+- Every PHP file needs a GPL `@license` docblock.
+- Add `*.ini text eol=lf` to `.gitattributes`, because `core.autocrlf=true` ships CRLF language files.
+- JED Checker skips language INIs whose filename contains a hyphen (`rules/language.php` regex), so it reports
+  false "unknown key" warnings. Explain this to the reviewer.
+- JAMSS false positives: #21 = hex escapes in a regex (`[[:cntrl:]]` avoids it); #17 = `base64_decode(` nested in
+  parentheses; #23 = superglobal access near exec-like names. Justify each one to the reviewer.
+- JED Checker breaks on Joomla 6 ("Error: 0"), so run it on a Joomla 5 site and give the results 40 s or more to render.
+
+**Paid listings**
+- Type **"Paid download"**, integration **"Paid purchase required at link:"** pointing at the extension's
+  **own** product page.
+- A **licence link on your own site is required**; gnu.org (or a private repo's GitHub) is rejected.
+- The extension must **work without a licence key**: a Download ID may only gate downloads and updates.
+- Reviewers work from the uploaded zip.
+
+**Renaming a listing**
+- The title is **read-only** on the edit form; only the JED team can rename.
+- The web ticket (*Listing* department, subject "- RENAME LISTING - …") is hCaptcha-gated.
+- **Emailing `jed-support@community.joomla.org` works** (the Reply-To address on JED reviewer mail).
+
+**Before any release that goes public**
+- **Scan the full git history for secrets.** A live client cPanel token sat in a public extension repo's
+  first commit for 3½ months: `git log --all -p | grep -E '[A-Z0-9]{32}'`. Never commit deploy scripts with
+  tokens; read them from the environment.
+- After an element rename, re-test the **versionless download URL**, not just the feed. Release Manager kept the
+  zip in the old element's folder, so the download 404'd while the feed looked fine.
+
 ---
 
 ## JED Contributor account setup
@@ -291,6 +343,11 @@ JED listings can go stale fast if the extension is moving and the listing isn't.
 ---
 
 ## History
+
+- **2026-10-20** — Added step 9: the JED rules learned while preparing six extensions plus the MCP for J add-ons
+  in one overnight pass. Covers the pending limit, add-on and paid-listing rules, the naming rules (including
+  "Joomla" and the OSM licence), manifest/JED Checker gotchas, how a listing gets renamed, and a pre-release
+  secret scan.
 
 - **2026-06-24** — Initial version. Distilled from the live JED submission of cs-template-integrity v2.4.3 on WMW #343 (Watch Me Work episode #343), particularly @Bredc's live catches of the three first-timer gotchas (download URL vs page URL, full-URL logo requirement, support + license link required fields).
 - **2026-10-19** — Added step 4b: the listing logo is a **logo + screenshot banner** (Tim's standard), built with `tools/jed-banner.py`. The current JED form uploads the extension zip, the logo and the images as files (field table updated). Also learned: run **JED Checker** before submitting (the form makes you confirm it); its 2.4.4 release has no zip, so zip the repo root, and run it on a **Joomla 5** site (it errors on Joomla 6).
