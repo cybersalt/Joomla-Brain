@@ -229,8 +229,8 @@ Walk this in order. Tab between fields; don't lose the form.
 | Compatibility | Joomla 5.x, 6.x | Match what your manifest's `<files>` and `<update>` blocks declare |
 | PHP version | Match manifest minimum | J5: 8.1+, J6: 8.3+ |
 | Download URL | **File URL, not page URL** (see step 2) | Critical |
-| Logo URL | **Full `https://...` URL** (see step 3) | Critical |
-| Screenshots | Full URLs, ≥2 images | One per field; full URLs |
+| Logo | **Upload** the 1200×525 logo + screenshot banner (see step 4b) | Required. The current form takes a file, not a URL |
+| Images | **Upload** 2–8 screenshots | Files, not URLs |
 | Support link | Public help destination (see step 4) | Required |
 | License page link | GPL-2.0 text URL (see step 4) | Required |
 | License (dropdown) | GPL v2 or later | Match what you said in the manifest |
@@ -293,4 +293,5 @@ JED listings can go stale fast if the extension is moving and the listing isn't.
 ## History
 
 - **2026-06-24** — Initial version. Distilled from the live JED submission of cs-template-integrity v2.4.3 on WMW #343 (Watch Me Work episode #343), particularly @Bredc's live catches of the three first-timer gotchas (download URL vs page URL, full-URL logo requirement, support + license link required fields).
+- **2026-10-19** — Added step 4b: the listing logo is a **logo + screenshot banner** (Tim's standard), built with `tools/jed-banner.py`. The current JED form uploads the extension zip, the logo and the images as files (field table updated). Also learned: run **JED Checker** before submitting (the form makes you confirm it); its 2.4.4 release has no zip, so zip the repo root, and run it on a **Joomla 5** site (it errors on Joomla 6).
 - **2026-09-06** — Corrected the WMW #343 submission version from 2.4.2 to **2.4.3** (the figure was wrong here and in the vault's JED account note). Added two gotchas from bringing the Override Checker listing current: **the Download URL is pinned to the extension element name** and survives a listing rename (step 2), and **a required field can be saved empty** — the License page link had been blank since submission (step 4). Both echoed in "Ongoing — keeping the JED listing fresh".
