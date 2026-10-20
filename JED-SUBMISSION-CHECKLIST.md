@@ -103,6 +103,23 @@ The submission form has dedicated fields for these and JED's review will bounce 
 
 - [ ] **Walk every required field on the listing and confirm it's populated** — don't rely on the form to enforce it, and don't limit remediation to the items a reviewer happened to mention. A reviewer's message is a sample of what's wrong, not the complete list.
 
+### 4b. The listing "logo" is a logo + screenshot banner (Tim's standard, 2026-10-19)
+
+The JED form's **Logo** field is not a small icon: it becomes the big image across the top of the
+listing page (1200×525, aspect 16:7). A bare logo on white looks empty. **Every Cybersalt listing uses
+a banner: the extension logo on the left, a screenshot of the extension working on the right.**
+
+```bash
+python -I tools/jed-banner.py <logo.svg|png> <screenshot.png> <ext>-jed-banner-1200x525.png
+```
+
+- Use an **anonymized** screenshot that shows the product doing its job (status panel, report, dashboard),
+  not an empty settings form.
+- Upload the banner in the **Logo** field (it's a file upload, not a URL) and the plain screenshots in
+  **Images** (up to 8).
+- Changing it on an existing listing: Edit → Logo → **Delete** the old file → Add file → Save. The
+  zip and images stay as they are.
+
 ### 5. Screenshots are current
 
 - [ ] **At least 2 screenshots**, 3-5 ideal
