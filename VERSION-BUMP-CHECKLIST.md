@@ -25,6 +25,13 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 - [ ] **Update updates.xml** with the new version, the new SHA256 of the released zip, and the GitHub release asset URL — only after the release exists, so the URL resolves
 - [ ] **Commit and push updates.xml** as a separate commit
 - [ ] **Test install/upgrade** on a live site
+- [ ] **Update the JED listing, every release** (Tim, 2026-10-20: *"whenever we release a new version, we should update the JED listing. Not only the version, but if we do new features or different things we should also consider editing the listing"*). If the extension is listed on the JED (live **or pending**):
+  - set **Version** to the new release, and replace the **Extension file** with the released zip (Edit form: Delete the old file, add the new one, then Save; the logo and images stay as they are);
+  - update the description's `Current release:` line;
+  - **review the whole description** against the changelog. New features, renamed screens, changed requirements or a changed add-on count mean the text should change. If it does, rewrite those parts (a description rewrite goes to Tim as a draft first, but version, zip and current-release changes don't need one). Update screenshots if the UI changed;
+  - re-test the listing's Download URL (`curl -sIL`).
+
+  Listings and edit URLs: vault `09.accounts/joomla-extensions-directory.md`. The edit-form script is `jed-packages/` in the vault (the `edit17890.py` pattern).
 
 ## Release Manager upload
 
