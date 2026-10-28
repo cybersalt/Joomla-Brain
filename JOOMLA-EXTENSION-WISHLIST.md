@@ -161,6 +161,20 @@ Every extension passes a `security-review` skill run with **zero HIGH or MEDIUM 
 
 ---
 
+## 🩺 Shipped-File Integrity Check
+
+**Full how-to:** [[INTEGRITY-CHECK.md]] + `tools/integrity/`. **Every extension** (Tim, 2026-10-28: *"build it once and add it to the Joomla Brain … make it a part of … every Joomla extension"*).
+
+Joomla doesn't roll back a failed update. The site is left with a mix of old and new files, sometimes with a 0-byte PHP file, and nothing tells the owner. Every extension ships an `integrity.json` (size + SHA-256 of each shipped file, written by the build) and checks it:
+- **Components:** an alert at the top of the dashboard, covering every extension in the package.
+- **Plugins, modules and templates:** the `Integrity` field on the settings page.
+
+The alert is red for missing or 0-byte files and yellow for changed files, and it lists the files. It's quiet when everything matches.
+
+When adding the 17 languages, copy the `CS_INTEGRITY_*` keys into each language file too. Until then the alert falls back to English.
+
+---
+
 ## 🟢 Only Support Actively-Maintained Joomla Versions
 
 **Source:** Tim Davis, established 2026-05-23 while spec'ing cs-cron-master.

@@ -43,6 +43,11 @@ You are assisting with Joomla extension development. Apply these patterns, conve
 - **`opcache_invalidate()` after every PHP write** — otherwise stale cached bytes run on the next request.
 - **CRLF/header injection** — sanitize any user-derived value reflected into `Content-Disposition`/`Content-Type` via `preg_replace('/[^A-Za-z0-9._-]/', '-', …)`.
 - **No free-form `file_path` from request bodies** — accept an id, look the path up server-side from a database row.
+
+### 6. Shipped-File Integrity Check (every extension, 2026-10-28)
+- The build writes `integrity.json` (size + SHA-256 of each shipped file) with `tools/integrity/New-IntegrityList.ps1`, and the manifest lists `<filename>integrity.json</filename>`.
+- `tools/integrity/Install-IntegrityCheck.ps1` copies `IntegrityCheck` (and, with `-WithField`, the `Integrity` form field) in under the extension's own namespace.
+- Components show `IntegrityCheck::renderAlert()` at the top of the dashboard for every extension in the package. Plugins, modules and templates use the field on their settings page. Full how-to: `INTEGRITY-CHECK.md`.
 - **`htmlspecialchars()` on `Text::_()` in installer scripts** — `script.php`'s `postflight()` echoes into Joomla's installer frame.
 - **Run the `security-review` skill before tagging a release.** Bar: zero HIGH or MEDIUM findings.
 

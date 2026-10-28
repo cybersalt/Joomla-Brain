@@ -26,6 +26,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 ## Unreleased
 
 ### 🚀 New
+- **2026-10-28** — **Shipped-file integrity check, standard for every extension** (`INTEGRITY-CHECK.md`, `tools/integrity/`). `New-IntegrityList.ps1` writes `integrity.json` from the manifest at build time. `Install-IntegrityCheck.ps1` copies `IntegrityCheck` (plus an optional `Integrity` form field) into an extension under its own namespace and adds the `CS_INTEGRITY_*` strings. The dashboard shows a red alert for missing or 0-byte files and a yellow one for changed files. Added to `NEW-EXTENSION-CHECKLIST.md` and `VERSION-BUMP-CHECKLIST.md`. Prompted by Bjørn's report: Imunify360 Proactive Defense killed a copy during an MCP for J update and left a file at 0 bytes. First implemented in cs-mcp-for-j 2.10.0.
 - **2026-10-20** — `JOOMLA5-COMMON-GOTCHAS.md` #35–#38, found building cs-extension-manager: #35 `BaseController` has no `getApplication()` on Joomla 6 (use `$this->app`); #36 Atum zeroes `.modal-body` padding; #37 Bootstrap drops `modal.hide()` while the modal is still fading in (fix with a wanted-state flag settled on `shown.bs.modal`); #38 quick icons with a live count via `ajaxurl` and the `{data: {amount, name, sronly}}` JSON mod_quickicon expects.
 
 ---
