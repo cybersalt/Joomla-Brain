@@ -115,15 +115,54 @@ python -I tools/jed-banner.py <logo.svg|png> <screenshot.png> <ext>-jed-banner-1
 
 - Use an **anonymized** screenshot that shows the product doing its job (status panel, report, dashboard),
   not an empty settings form.
-- Upload the banner in the **Logo** field (it's a file upload, not a URL) and the plain screenshots in
-  **Images** (up to 8).
+- Upload the banner in the **Logo** field (it's a file upload, not a URL). The **Images** are feature
+  slides (step 4c), not plain screenshots.
 - Changing it on an existing listing: Edit → Logo → **Delete** the old file → Add file → Save. The
-  zip and images stay as they are.
+  zip and images stay as they are. Scripted: `python -I tools/jed-swap-logo.py <state.json> <edit_url> <banner.png> <tag> dry|save`.
+
+### 4c. The listing "Images" are feature slides, all 8 if there's enough to show (Tim's standard, 2026-10-28)
+
+The Images play in the same 1200×525 slideshow as the Logo banner. Plain full-page screenshots get
+scaled down into a sea of white space and nobody can read them. **Every image is a slide: a feature
+headline and 2–3 plain sentences on the left, a cropped, readable screenshot of that feature on the
+right** (the banner's 700×455 frame). JED allows **8 images; use all 8** when the extension has that
+many real features. Don't pad with filler.
+
+```bash
+python -I tools/jed-slides.py slides.json          # build (config format in the script's docstring)
+python -I tools/jed-login.py <user> <pass> state.json
+python -I tools/jed-swap-images.py state.json <edit_url> <tag> dry  s1.png ... s8.png   # read <tag>-edit.png
+python -I tools/jed-swap-images.py state.json <edit_url> <tag> save s1.png ... s8.png
+python -I tools/jed-listing-order.py https://extensions.joomla.org/extension/<alias>/
+```
+
+- **Crop to one feature** at a 0.7–1.2 scale (the script prints it). Keep the crop aspect near 700:455.
+- **Copy:** a 2–7 word headline and 2–3 sentences. Use plain words and no em dashes, and only make claims you checked in the code.
+- ⛔ **JED slider quirk:** the public slideshow shows the **first stored image last** (Logo, images
+  2…8, then image 1). `jed-swap-images.py` handles it: pass the slides in viewing order and it uploads
+  the last one first. Check the result with `jed-listing-order.py`.
+- Two sessions logged in to the **same JED account** log each other out. Work one listing per account
+  at a time, or log in again right before each save.
+- The edit form's file inputs are, in order, zip, Logo, Images (the Images input takes several files).
+  The swap script deletes the old image rows and refuses to save if the Logo, zip or version changed.
+- Keep the config, source screenshots and built slides with the extension's notes so the slides can be
+  rebuilt when the UI changes.
+- **If the extension has a video, put it in the Video field** (Tim, 2026-10-28: "I'd like to have the
+  videos as the first slides"). There is one Video field. It takes AllVideos syntax,
+  `{youtube}VIDEO_ID{/youtube}` or `{vimeo}ID{/vimeo}`, and JED always plays it as the slide right after
+  the Logo, before the images. ⛔ A bare YouTube URL saves fine but never renders. The video is the
+  first thing a visitor plays, so Tim wants it **crisp and clean** and showing the current UI. If there
+  isn't one, or it's old, note "needs a new video" in the extension's open items. Don't use an
+  outdated one just to fill the slot. Set it with:
+
+  ```
+  python -I tools/jed-set-video.py <state.json> <edit_url> <youtube_id> <tag> dry|save
+  ```
 
 ### 5. Screenshots are current
 
-- [ ] **At least 2 screenshots**, 3-5 ideal
-- [ ] **800-1280px wide** (JED's thumb generator works best in this range)
+- [ ] **Enough features for 8 slides** (step 4c); at least 2
+- [ ] **800-1280px wide** captures (crop from them, don't upscale tiny ones)
 - [ ] **PNG or JPG**, no transparent backgrounds (will render on a white page)
 - [ ] **Current UI** — not 2019-era screenshots from an earlier version. If the dashboard redesigned in a recent release, retake every screenshot.
 - [ ] **Real data**, not Lorem-Ipsum placeholder rows — looks more credible
@@ -282,7 +321,8 @@ Walk this in order. Tab between fields; don't lose the form.
 | PHP version | Match manifest minimum | J5: 8.1+, J6: 8.3+ |
 | Download URL | **File URL, not page URL** (see step 2) | Critical |
 | Logo | **Upload** the 1200×525 logo + screenshot banner (see step 4b) | Required. The current form takes a file, not a URL |
-| Images | **Upload** 2–8 screenshots | Files, not URLs |
+| Images | **Upload** up to 8 feature slides (see step 4c) | Files, not URLs. The slider shows the first upload last, so use `tools/jed-swap-images.py` |
+| Video | `{youtube}VIDEO_ID{/youtube}` (see step 4c) | One video. It plays right after the Logo. A bare URL doesn't render |
 | Support link | Public help destination (see step 4) | Required |
 | License page link | GPL-2.0 text URL (see step 4) | Required |
 | License (dropdown) | GPL v2 or later | Match what you said in the manifest |
@@ -344,6 +384,12 @@ JED listings can go stale fast if the extension is moving and the listing isn't.
 
 ## History
 
+- **2026-10-28** — Added step 4c: listing **Images are feature slides** (headline + text left, readable
+  cropped screenshot right), all 8 when the features are there. New tools: `jed-slides.py`,
+  `jed-swap-images.py`, `jed-login.py`, `jed-listing-order.py`. Found the JED slider quirk: the
+  first stored image is shown last. First applied to CS MCP for J (17890). Later the same day: the
+  Video field (one video, AllVideos syntax, shown right after the Logo; a bare URL doesn't render)
+  and `tools/jed-set-video.py`.
 - **2026-10-20** — Added step 9: the JED rules learned while preparing six extensions plus the MCP for J add-ons
   in one overnight pass. Covers the pending limit, add-on and paid-listing rules, the naming rules (including
   "Joomla" and the OSM licence), manifest/JED Checker gotchas, how a listing gets renamed, and a pre-release
