@@ -26,6 +26,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 ## Unreleased
 
 ### 🐛 Fixes
+- **2026-11-06** — `JOOMLA-EXTENSION-WISHLIST.md`: the Custom CSS escape also escaped `>`, which breaks child-combinator selectors. It now escapes `<` only. Shift-click section: says core's `multiselect` script does this, once a page loads it.
 - **2026-11-06** — `PACKAGE-BUILD-NOTES.md` and `JOOMLA5-COMPONENT-GUIDE.md` told extensions to set `<changelogurl>` to `CHANGELOG.html`, which gives an empty Changelog modal. Both now use `changelog.xml`. `JOOMLA5-CHECKLIST.md` listed a `<maintenance>` group that Joomla doesn't have; removed. `REPOS-USING-BRAIN.md` said Release Manager had no changelog endpoint (it has since 1.12.6) and called StageIt an "environment banner system". Corrected.
 
 ### 🔧 Improvements

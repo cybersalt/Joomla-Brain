@@ -292,10 +292,10 @@ Joomla can't read either of those. Its Changelog buttons, and mySites.guru's rel
 **⚠️ Escape at the output sink, every time.** `addInlineStyle()` writes its content into `<style>` **verbatim**, and the field must be `filter="raw"` (a `string` filter mangles selectors like `a[href^="x"]`). Unescaped, `</style><script>…</script>` in the box runs on every page that renders it. Found in cs-smart-pagenav, 2026-08-14:
 
 ```php
-$css = str_replace(['<', '>'], ['\00003c ', '\00003e '], $css);
+$css = str_replace('<', '\00003c ', $css);
 ```
 
-CSS never legitimately needs literal angle brackets, and the escape form still works inside `content:` strings.
+Every way out of a `<style>` element starts with `<`, so escaping that one character is enough, and the escaped form still works inside `content:` strings. **Leave `>` alone:** it's the child combinator (`.a > b`), and escaping it silently breaks those rules (corrected 2026-11-06; this page used to escape both, and cs-smart-pagenav copied it). Don't strip `</style` instead: `str_ireplace('</style', '', $css)` turns `</</stylestyle>` back into `</style>`.
 
 **Why it matters:** site owners want an extension to look like *their* site. Without these, the only options are a template override or forking the stylesheet, and both break on the next update. Quick options cover most requests without a support ticket; the CSS box covers the rest.
 
@@ -555,6 +555,8 @@ boxes.forEach(function (b) {
     });
 });
 ```
+
+**Standard Joomla lists get this free.** Core's `multiselect` script does shift-click ranges (`onRowClick`, `shiftKey`), but only on pages that load it: `$this->getDocument()->getWebAssetManager()->useScript('multiselect')`. `grid.checkall` doesn't load it for you. Use the code above only for lists core's script doesn't cover, such as several checkbox groups on one page.
 
 **Why it matters:** When a list runs to dozens or hundreds of rows, ticking each one individually is tedious and error-prone. Shift-click is the universal table-list muscle memory from desktop file managers, spreadsheets, Gmail, Trello — every Cybersalt list view should honour it instead of forcing the operator to click each row separately. Pair it with a per-group master checkbox and a global "Tick all everywhere" / "Untick all everywhere" pair of buttons so the operator has three speeds: one-at-a-time, range, all.
 
