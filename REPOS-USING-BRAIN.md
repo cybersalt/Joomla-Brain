@@ -27,8 +27,8 @@ This file tracks repositories that use the Joomla Brain as a submodule. Use thes
 | [cs-extension-manager](https://github.com/cybersalt/cs-extension-manager) | Package (com + plg_installer + plg_quickicon + plg_task) | Cybersalt Extension Manager: installs, updates, rolls back and health-checks every Cybersalt extension and MCP for Joomla add-on from one screen. Catalog from cs-Release-Manager (`api.packages`, else a bundled seed list + `api.updatexml` per product fetched with curl_multi, + `api.catalog` for add-ons). Store-only downloads with manual redirect handling, SHA-256 + manifest identity checks, dependency install, health check with one-click fixes, opt-in release emails via a Scheduler task, quick icon with an `ajaxurl` count, standard log viewer. Free. v0.1.0 unreleased 2026-10-20. | Joomla 5/6 native (JSON controller tasks + lock-out queue modal, `onInstallerBeforePackageDownload`/`BeforeUpdateSiteDownload`, TaskPluginTrait, `HttpFactory` with `follow_location=false`) |
 | [cs-job-forms](https://github.com/cybersalt/cs-job-forms) (private) | Package (com + plg_fields) | Cybersalt Job Forms: phone-friendly fill-in job forms for site crews. Each form is a **category**, its fields are **core custom fields** (context `com_csjobforms.submission`, registered via `FieldsServiceInterface`), field groups are the sections, repeatable readings use the core Subform field. Submissions saved through `AdminModel` (so the core Fields plugin stores values), rendered to PDF with bundled dompdf, stored outside web access, emailed to whitelisted Send To choices. Ships `plg_fields_cssignature` (finger-signature custom field type). First client: West Coast Waterproofing (QC Spray Report). v0.1.2 prototype 2026-10-16. | Joomla 5/6 native (CategoryServiceInterface + FieldsServiceInterface, custom FieldsPlugin with `addfieldprefix` field class, admin model reused from the site side) |
 | [cs-page-protector](https://github.com/cybersalt/cs-page-protector) | Package (com + plg_system) | Cybersalt Page Protector: puts a proof-of-work check (Joomla 6.1 core `powcaptcha` via the captcha framework) in front of chosen menu items **and** modules/positions to slow scrapers. Signed site-wide pass cookie, DNS-verified search-engine exemptions, IP shortening on by default, dashboard + event log, inline "Show content" check for modules (one captcha per page), page-cache exclusion. Free; released via cs-Release-Manager (package 31). v0.1.0 released 2026-10-07. | Joomla 5/6 native (SubscriberInterface, `onAfterRoute` in-place challenge, `onAfterModuleList`/`onRenderModule`, `onPageCacheSetCaching`/`IsExcluded`, 17 languages, update server via Release Manager) |
-| [StageIt-5](https://github.com/cybersalt/StageIt-5) | Package | Environment banner system | Joomla 5 (legacy plugin format) |
-| [StageIt-6](https://github.com/cybersalt/StageIt-6) | Package | Environment banner system | Joomla 6 (legacy plugin format) |
+| [StageIt-5](https://github.com/cybersalt/StageIt-5) (private) | Package | Staging-site manager: clones a live site into a subfolder and pushes changes back | Joomla 5, security updates only, served by Release Manager on php-web-design.com |
+| [StageIt-6](https://github.com/cybersalt/StageIt-6) (private) | Package | Staging-site manager: clones a live site into a subfolder and pushes changes back | Joomla 6, served by Release Manager on php-web-design.com |
 
 ### Components
 | Repo | Type | Description | Status |
@@ -59,8 +59,8 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-autogallery | ❌ | ❌ | ❌ | ❌ | ✅ |
 | cs-joomla-router-tracer | ❌ | ❌ | �� | ✅ | ✅ |
 | cs-browser-page-title | ❌ | ❌ | ❌ | ❌ | ✅ |
-| StageIt-5 | ❌ | ❌ | ✅ | ❌ | ✅ |
-| StageIt-6 | ❌ | ❌ | ✅ | ❌ | ✅ |
+| StageIt-5 | N/A (Release Manager) | ✅ (Release Manager) | ✅ | ❌ | ✅ |
+| StageIt-6 | N/A (Release Manager) | ✅ (Release Manager) | ✅ | ❌ | ✅ |
 | cs-filter-by-meta | ❌ | ❌ | ❌ | ❌ | ✅ |
 | cs-talkback-to-joomla | ❌ | ❌ | ❌ | ✅ | ✅ |
 | cybersalt-related-articles | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -73,7 +73,9 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-edge-cache-marker | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-0-9-and-a-z-menu | N/A (Release Manager) | ✅ (Release Manager) | ✅ | ❌ (see note) | ✅ |
 
-**Release Manager-served repos** (`<updateservers>` points at `com_csreleasemanager&task=api.updatexml` on cybersalt.com): there is no `updates.xml` to maintain, and the sha256 comes from the Release Manager version record. `changelogurl` is a known gap for **private** repos: a raw.githubusercontent URL 404s for customer sites and Release Manager emits no `<changelogurl>` or changelog endpoint yet, so `changelog.xml` is kept in the repo but not wired up.
+**Release Manager-served repos** (`<updateservers>` points at `com_csreleasemanager&task=api.updatexml` on cybersalt.com): there is no `updates.xml` to maintain, and the sha256 comes from the Release Manager version record. Release Manager has served `api.changelogxml` since 1.12.6 (2026-10-10), so manifests can point at it, including private repos, whose raw.githubusercontent URLs 404 for customer sites. **Known gap (2026-11-06):** its `api.updatexml` feed still emits no `<changelogurl>`, so the Update screen shows N/A. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
+
+**A ✅ under `changelogurl` means the tag exists, not that it works.** Several still point at `CHANGELOG.html`, which gives an empty modal, or at a private repo's raw URL, which 404s.
 
 ---
 

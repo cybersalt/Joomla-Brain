@@ -5,6 +5,9 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 > [!TIP]
 > **For MINOR or MAJOR bumps, also run through `JOOMLA-EXTENSION-WISHLIST.md`** to confirm the cross-cutting expectations (lock-out modals, API-billing transparency, dark-mode testing, CI, etc.) are still in place. PATCH releases can usually skip the wishlist pass unless they touched UI or third-party API integration.
 
+> [!IMPORTANT]
+> **Changelogs are part of every release, for every extension.** Tim, 2026-11-06: *"this should not have happened. Change logs, always, everything needed for change logs needs to be in each release, for all extensions."* That followed StageIt's November security releases going out with no entry behind Joomla's Changelog button. A release isn't done until all of these are true: `CHANGELOG.md` and `CHANGELOG.html` have it, Joomla's changelog XML has an entry for the exact version (`curl` it), `<changelogurl>` is in the manifest and the update entry, and any changelog article on the selling site has it. Fix anything missing as part of the release; don't report it as open.
+
 ## Steps (in order)
 
 - [ ] **Run a security review of every file changed since the previous tagged version.** Use the `/security-review` workflow against the diff (or against the working tree if changes haven't been committed yet). This is a hard prerequisite — never bump the version on code that hasn't been security-reviewed since the last bump. The review depth scales with bump size — see "Review depth by bump type" below.
@@ -12,6 +15,7 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 - [ ] **Bump version number** in every manifest XML (component, plugin, module, package — whatever the extension ships)
 - [ ] **Update CHANGELOG.md** — add new version section at top with emoji headers (🚀 🔧 📦 🐛 🔒 📝 etc.)
 - [ ] **Update CHANGELOG.html** — matching article-ready HTML (no `<html>`, `<head>`, `<body>`, or `<style>` tags)
+- [ ] **Add this version to Joomla's changelog.** Add it to `changelog.xml`, or fill in the version's release notes if Release Manager serves the extension (empty notes = no entry = an empty Changelog modal). The version string must match the manifest exactly. After publishing, click Changelog on System → Update → Extensions. Security releases too. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
 - [ ] **Refresh README.md.** Don't just ask "did features change" — also look for *drift*. Two specific failure modes that have bitten Cybersalt extensions:
     - **Stale version numbers in section headings.** A heading like `## What ships in v2.0` written when 2.0 was current never auto-updates. Run `grep -nE '\bv?[0-9]+\.[0-9]+(\.[0-9]+)?\b' README.md` to enumerate every version mention; check each line is either still correct or genuinely historical (e.g. *"v0.9.0 closed the live RCE primitive"* is fine forever, but *"What ships in v2.0"* goes stale the moment 2.1 ships). Prefer version-agnostic wording (*"What's in the box"*, *"Components"*) so the doc doesn't decay every release.
     - **Brand names that drifted.** If the user-facing brand changed in any prior release (e.g. `CS Template Integrity` → `Cybersalt Template Integrity` in cs-template-integrity v2.2), install instructions and screenshot captions in the README often still reference the old name. `grep -n '<old-brand>' README.md` to catch them.

@@ -154,7 +154,7 @@ The classic `admin/` ↔ `site/` ↔ `api/` split aligns with the three Joomla a
         </files>
     </api>
 
-    <changelogurl>https://raw.githubusercontent.com/cybersalt/com_example/main/CHANGELOG.html</changelogurl>
+    <changelogurl>https://raw.githubusercontent.com/cybersalt/com_example/main/changelog.xml</changelogurl>
     <updateservers>
         <server type="extension" priority="1" name="Example Updates">
             https://cybersalt.com/updates/com_example.xml

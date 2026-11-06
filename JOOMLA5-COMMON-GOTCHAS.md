@@ -1225,6 +1225,26 @@ flow, or store uploads outside `media/`.
 
 ---
 
+## 44. Atum has no `--bs-*` CSS variables: `var(--bs-body-color, #212529)` falls back to light colours in dark mode
+
+Joomla's Atum admin template compiles Bootstrap **without the `bs-` prefix**. The variables are `--body-color`, `--body-bg`, `--border-color`, `--secondary-color`, `--tertiary-bg`, `--link-color`, `--primary`, `--body-font-family`, `--card-bg`; `--bs-body-color` and friends are empty. So `color: var(--bs-body-color, #212529)` always uses the fallback, which gives dark grey text on Atum's dark background. Confirmed on Joomla 6.2 (StageIt, 2026-10-30).
+
+**Fix:** use the unprefixed names, or map them once on your component's pages:
+
+```css
+body.admin.com_yourext {
+    --bs-body-color: var(--body-color);
+    --bs-body-bg: var(--body-bg);
+    --bs-border-color: var(--border-color);
+    --bs-secondary-color: var(--secondary-color);
+    --bs-tertiary-bg: var(--tertiary-bg);
+}
+```
+
+Also: Atum colours **toolbar** buttons by position, not by class (the left group renders blue and the `ms-auto` group grey whatever `btn-*` class you set), so marking the current page among toolbar nav buttons needs your own class and CSS.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)

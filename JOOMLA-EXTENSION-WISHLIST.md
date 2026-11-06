@@ -262,11 +262,13 @@ When a new extension would benefit from runtime logging, the choice isn't "shoul
 
 ---
 
-## 📝 Changelog (Markdown + HTML, Kept In Sync)
+## 📝 Changelog (Markdown + HTML In Sync, Plus Joomla's Changelog Button)
 
-**Already documented in:** [[README.md]] → Changelog Format + [[VERSION-BUMP-CHECKLIST.md]].
+**Already documented in:** [[README.md]] → Changelog Format + [[VERSION-BUMP-CHECKLIST.md]] + [[JOOMLA5-UPDATE-SERVER-GUIDE.md]] → "The Changelog Button".
 
 Both `CHANGELOG.md` and `CHANGELOG.html` exist, use the emoji section convention (🚀 New | 🔧 Improvements | 📦 Build | 🐛 Fixes | 🔍 Security | 📝 Docs), and are updated in the same commit as the version bump.
+
+Joomla can't read either of those. Its Changelog buttons, and mySites.guru's release notes, need `<changelogurl>` in the manifest **and** in each update entry, pointing at Joomla-format XML with an entry for that exact version.
 
 ---
 
@@ -361,6 +363,20 @@ public static function getContactSentence(): string
 ```
 
 Add a `<fieldset name="support">` to `config.xml` with the three fields. Use `SupportHelper::getContactSentence()` everywhere a "contact support" message is shown. See `cs-download-id-manager` for a working example.
+
+---
+
+## ✉️ Support Screen With a Message Form (and an Honest Free-Support Note)
+
+**Source:** Tim Davis. Built in cs-mcp-for-j v2.6.0 (Support view); made an every-extension rule 2026-10-30 while reviewing StageIt ([StageIt-6 #1](https://github.com/cybersalt/StageIt-6/issues/1)).
+
+**Pattern:** A **Support** screen in the extension's admin (submenu item + toolbar button) with a form that emails the vendor's support address through Joomla's mailer: message type (bug / feature / question / idea / other), subject, message, reply-to (pre-filled with the user's Joomla email). Site details go along automatically and are listed on the screen so the user sees exactly what is sent (site URL, extension version, Joomla + PHP versions, membership status; never secrets). Optional "attach recent warnings and errors" from the extension's log. If the site's mail fails, show the text so it can be copied. A banner sets expectations: free users get *"support for the free version is on a best-effort basis (our resources for free support are limited)"*, paying members get a priority-support banner.
+
+**Paid-only products** (no free version, e.g. StageIt; Tim, 2026-10-30): the form works **only with an active membership** (checked when the screen opens and again on submit). Anyone else gets a kind *"It looks like your support membership is no longer active"* message, a **Renew** link to the product page, and *"You can always contact us through our general support address if you have questions before you renew."* No free-support note on those.
+
+**Why it matters:** Users report problems from where they hit them, with the details support needs already attached, and the free-support note keeps expectations fair.
+
+**Implementation pointer:** cs-mcp-for-j `admin/tmpl/support/default.php` + `admin/src/Controller/SupportController.php` (+ `COM_CSMCPFORJ_SUPPORT_*` strings). Cybersalt extensions send to support@cybersalt.com; PHP Web Design products to their own support address. Pairs with §"Built-In Support Area".
 
 ---
 
@@ -589,6 +605,28 @@ The pattern uses a tiny **custom form field type** — `BrandheaderField` extend
 **Implementation pointer:** Reference implementation in [cs-articles-module-maxxed v1.3.0](https://github.com/cybersalt/cs-articles-module-maxxed) — see `src/Field/BrandheaderField.php` for the custom field class, and `csarticlesmodulemaxxed.xml` for the `<fields name="params" addfieldprefix="Cybersalt\Plugin\System\Csarticlesmodulemaxxed\Field">` wiring + per-fieldset `<field type="brandheader" subtitle="..."/>` placements. The field is ~80 lines including the scoped CSS; copy + adjust the namespace + logo path per extension. Eventually worth extracting to a shared `cs-extension-ui` library if/when more than three extensions adopt it.
 
 **Companion to:** post-install card §"Post-Install Card With Next Steps" — uses the same colour variables and logo so the install card and the settings tabs feel like the same brand.
+
+---
+
+## 🌫 Timed Blur on Email Addresses and Shown Secrets (With a Setting)
+
+**Source:** Tim Davis. First built in cs-mcp-for-j (2026-08-15 token pill, 2026-08-20 Pro email, hold-to-reveal countdown 2026-08-21). Made an every-extension rule 2026-10-30 while reworking the StageIt Automatic Updates screen: *"the JavaScript blur, timed blur that covers up email addresses inside the updates area so they're not accidentally revealed. And that comes with having a setting for that as well."*
+
+**Pattern:** Any admin screen that **displays** an email address, licence/activation email, API token or similar value blurs it with CSS `filter: blur(5px)`. To see it, the operator holds the mouse over it (or tabs into it) for a set number of seconds; a small countdown pill ("Showing in 3s") sits centred on the blurred value while they wait. Moving away cancels the countdown. **Clicking it shows it straight away** (a click is deliberate; only a passing mouse needs the countdown, Tim 2026-10-30), and an input stays visible until the operator leaves the field. Once shown by hover, it blurs again after a set number of seconds, or as soon as the mouse leaves. **An empty box is never blurred**, so the operator can type an email in right away; clearing the box removes the blur. Copy and form submit are unaffected (the value in the DOM is untouched).
+
+A setting comes with it, in **Options → Privacy**:
+
+- **Blur email addresses** — Yes/No (`btn-group btn-group-yesno`), default Yes
+- **Show after (seconds)** — `type="integer"` 0–60, default 3 (0 = show straight away on hover)
+- **Blur again after (seconds)** — `type="integer"` 0–300, default 8 (0 = stay visible until the mouse leaves)
+
+The two timing fields use `showon="blur_email:1"`.
+
+**Not the same as secret input fields.** A field where the operator *types* a password or API token still uses `type="password"` + eye toggle (see the "Eye-toggle reveal on secret fields" rule). The timed blur is for values the screen *shows back*, where the risk is a screen share, a training video or someone looking over a shoulder.
+
+**Why it matters:** the whole purpose is not revealing emails by accident in video recordings (Tim, 2026-10-30). Tim records training videos and shares his screen with clients. An email or token sitting in plain text on an admin screen is one frame-grab away from being public. A plain CSS `:hover` reveal undoes itself whenever the pointer crosses the value on its way somewhere else; the hold-to-reveal delay makes showing it a deliberate act, and the auto re-blur covers "I looked, then got distracted".
+
+**Implementation pointer:** Reference implementations: cs-mcp-for-j `admin/tmpl/dashboard/default.php` (search "Hover-with-delay reveal"; options `hover_reveal_delay_seconds` / `hover_reveal_hide_seconds`) and StageIt-6 `component/views/updates/tmpl/default.php` (`data-stg-blur`, options `blur_email` / `reveal_delay_seconds` / `reveal_hide_seconds`). The view reads the options, clamps them, and prints them into the script; the countdown text is a language string with a `{seconds}` placeholder. Also blur any server message that repeats the email.
 
 ---
 

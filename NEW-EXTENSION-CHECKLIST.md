@@ -47,6 +47,7 @@ Mirrors the v0.9.0 security review of cs-template-integrity. **The bar is "passe
 - [ ] **README.md** — description, features, requirements, installation, configuration, build instructions, license, author
 - [ ] **CHANGELOG.md** — with emoji section headers (🚀 🔧 📦 🐛 etc.)
 - [ ] **CHANGELOG.html** — article-ready HTML (no `<html>`, `<head>`, `<body>`, or `<style>` tags)
+- [ ] **Joomla's Changelog button works** — `<changelogurl>` in the manifest and in each update entry, pointing at Joomla-format XML. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
 
 ## Build & Release
 

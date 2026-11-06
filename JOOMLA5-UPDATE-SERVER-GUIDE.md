@@ -235,6 +235,73 @@ The element goes inside `<update>`, not inside `<downloads>` — the same level 
 
 ---
 
+## The Changelog Button (`changelog.xml` + `<changelogurl>`)
+
+**Required on every extension with an update server.** `CHANGELOG.md` and `CHANGELOG.html` are for people. Joomla can't read them. Its Changelog buttons read a separate XML file, and so do mySites.guru's release notes.
+
+**Source:** Phil Taylor's [How to add a changelog to a Joomla extension](https://mysites.guru/blog/add-changelog-to-joomla-extension/) (2026-11-06), which asked for this on StageIt. The group names and the exact version match were checked against Joomla's `libraries/src/Changelog/Changelog.php` (5.4-dev). The mySites.guru limits below are from the article.
+
+### The three pieces, on every release
+
+| Piece | Read by | If it's missing or wrong |
+|---|---|---|
+| `<changelogurl>` in the **manifest** | Changelog button on System → Manage → Extensions (stored in `#__extensions`) | No button |
+| `<changelogurl>` in **each `<update>` entry** | Changelog button on System → Update → Extensions (stored in `#__updates`). This is the one that matters most: it's what people read before updating | Shows N/A |
+| The **changelog file**, with an entry for that exact version | Both buttons | Modal opens empty |
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<changelogs>
+  <changelog>
+    <element>pkg_example</element>
+    <type>package</type>
+    <version>1.1.0</version>
+    <security>
+      <item><![CDATA[Fixed a stored XSS in image captions]]></item>
+    </security>
+    <fix>
+      <item><![CDATA[Captions & alt text are kept when an image is replaced]]></item>
+    </fix>
+    <addition>
+      <item><![CDATA[WebP and AVIF thumbnails]]></item>
+    </addition>
+  </changelog>
+</changelogs>
+```
+
+**The groups are exactly these seven:** `<security>`, `<fix>`, `<language>`, `<addition>`, `<change>`, `<remove>`, `<note>`. Joomla ignores anything else.
+
+### Rules
+
+- **The version must match exactly.** Joomla uses `version_compare(..., '==')`, so `1.1` doesn't match `1.1.0`. Copy the string from the manifest. **Every released version needs an entry, security releases most of all.** A version with no entry opens an empty modal.
+- **Wrap every `<item>` in CDATA, on one line, and keep the text plain.** Without CDATA, items containing `&`, `<`, an entity or a non-ASCII character split into several bullets (joomla-cms #48392): "Bjørn" becomes "Bj" + "ørn". `Changelog::characterData()` does `$this->items[] = $data` on every parser callback. This isn't only Joomla 6.2: the same code is in 5.4-dev, and the split was seen on a live 6.1.4 site. In a PHP 8.4 parser test, the escaped form split into 8 pieces and the CDATA form stayed whole. HTML inside CDATA renders as HTML in the modal.
+- **No whitespace or line break around the URL** in either `<changelogurl>`. Joomla doesn't trim it. Write it on one line, and escape `&` as `&amp;` in the manifest.
+- **The URL must return HTTP 200 to Joomla's server-side request.** A raw.githubusercontent.com URL on a **private repo returns 404** for every customer site. CORS doesn't matter.
+- **Never point it at `CHANGELOG.html`.** A 200 with HTML still gives an empty modal.
+- **Skipped versions don't show.** Joomla shows only the entry for the version on offer, so a site two releases behind sees only the newest. mySites.guru's Updates popup lists up to 15 entries between installed and offered, security first.
+- **`<infourl>` in the `<update>` entry** should be a public page for that release, not a homepage, sales page or login-walled download. It shows as a link under the extension name.
+- **Security releases also set the security level in the same `<update>` entry**, e.g. `<security>3</security>` (read by Joomla 5.4.9, 6.1.4 and 6.2).
+
+### releases.mysites.guru
+
+A row gets its Notes chip only when the changelog URL is http or https, at most 1,024 characters, and **on the same registrable domain as the update feed** (`cdn.example.com` and `www.example.com` count as the same). It fetches over ports 80 and 443, follows up to three redirects, reads at most 1 MB and caches for six hours.
+
+### Which URL to use
+
+| How the extension is served | `<changelogurl>` |
+|---|---|
+| **Release Manager** | `https://<store>/index.php?option=com_csreleasemanager&amp;task=api.changelogxml&amp;format=raw&amp;element=<element>`, plus `&amp;package=<key>` when several packages share an element (StageIt). The XML is built from each version's release notes, so **a version with empty notes gets no entry.** Use the store that serves the update feed (php-web-design.com for PHP Web Design products). |
+| **Public GitHub repo** | `https://raw.githubusercontent.com/<owner>/<repo>/main/changelog.xml`, in the manifest and in `updates.xml` |
+| **Private GitHub repo** | Serve it through Release Manager. Raw URLs 404 for customers. |
+
+### Test it
+
+1. `curl -s "<url>" | grep "<version>"` shows the version you're about to release.
+2. The feed shows it: `curl -s "<feed url>" | grep changelogurl`.
+3. On a site one version behind, click Changelog on System → Update → Extensions, and on System → Manage → Extensions after updating. Both modals show the notes, as single clean bullets.
+
+---
+
 ## Updating the Update Server Location
 
 The manifest `<updateservers>` URL is written to `#__update_sites.location` on install. If you need to change it programmatically (e.g., user configures a server URL):
@@ -259,6 +326,8 @@ $db->setQuery($query)->execute();
 | No update shown despite new version | XML `<element>` doesn't match installed extension element | Ensure `<element>` in XML exactly matches manifest element |
 | Update shown for wrong extension | XML `<element>` matches a different extension | Check element name uniqueness |
 | `extra_query` disappears | User clicked "Rebuild Update Sites" | Re-set via system plugin or on component load |
+| Changelog shows N/A on the Update screen | No `<changelogurl>` in the `<update>` entry | Add it to the feed, not only the manifest |
+| Changelog modal opens empty | URL is HTML, returns non-200, or has no entry for that exact version | See "The Changelog Button" |
 
 ---
 

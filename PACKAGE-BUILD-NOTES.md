@@ -152,11 +152,13 @@ To allow Joomla's built-in updater to detect and install new versions, you need 
 ### 1. Manifest XML — add update server and changelog URLs
 
 ```xml
-<changelogurl>https://raw.githubusercontent.com/OWNER/REPO/main/CHANGELOG.html</changelogurl>
+<changelogurl>https://raw.githubusercontent.com/OWNER/REPO/main/changelog.xml</changelogurl>
 <updateservers>
     <server type="extension" name="Extension Name Updates">https://raw.githubusercontent.com/OWNER/REPO/main/updates.xml</server>
 </updateservers>
 ```
+
+`<changelogurl>` must point at Joomla-format `changelog.xml`, never `CHANGELOG.html` (HTML gives an empty modal), and a private repo's raw URL returns 404 for customers. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
 
 ### 2. `updates.xml` — in project root, committed to main branch
 
@@ -171,7 +173,8 @@ To allow Joomla's built-in updater to detect and install new versions, you need 
         <folder>system</folder>
         <client>0</client>
         <version>1.2.2</version>
-        <infourl title="Extension Name">https://github.com/OWNER/REPO</infourl>
+        <infourl title="Extension Name 1.2.2">https://github.com/OWNER/REPO/releases/tag/v1.2.2</infourl>
+        <changelogurl>https://raw.githubusercontent.com/OWNER/REPO/main/changelog.xml</changelogurl>
         <downloads>
             <downloadurl type="full" format="zip">https://github.com/OWNER/REPO/releases/download/v1.2.2/extension_v1.2.2.zip</downloadurl>
         </downloads>

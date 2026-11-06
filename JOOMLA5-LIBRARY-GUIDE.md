@@ -449,6 +449,6 @@ Before you ship a library to a client site or to the wider world:
 - [[JOOMLA5-COMPONENT-GUIDE.md]] — building the component that consumes your library.
 - [[JOOMLA5-PLUGIN-GUIDE.md]] — plugins are the most common library consumers.
 - [[JOOMLA5-CUSTOM-FIELDS-GUIDE.md]] — if your library ships custom form fields, that guide covers field internals end-to-end.
-- [[JOOMLA5-CODING-STANDARDS.md]] — house style for PHP code, namespaces, and file headers.
+- [[JOOMLA-CODING-STANDARDS.md]] — house style for PHP code, namespaces, and file headers.
 - [[JOOMLA5-COMMON-GOTCHAS.md]] — autoloader and namespace pitfalls that bite library authors hardest.
 - [[JOOMLA6-CHECKLIST.md]] — forward-compat considerations when libraries cross the J5→J6 boundary.

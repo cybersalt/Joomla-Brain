@@ -141,6 +141,7 @@ en-GB, nl-NL, de-DE, es-ES, fr-FR, it-IT, pt-BR, ru-RU, pl-PL, ja-JP, zh-CN, tr-
 
 - **CHANGELOG.md**: Markdown with emoji section headers (🚀 New | 🔧 Improvements | 📦 Build | 🐛 Fixes | 🔍 Security | 📝 Docs)
 - **CHANGELOG.html**: Article-ready HTML — NO `<html>`, `<head>`, `<body>`, or `<style>` tags. Use semantic HTML with class names (`changelog-container`, `version-badge`, `date`, `section-icon`). Use direct emojis (🚀), not HTML entities.
+- **Joomla's Changelog button** reads neither of those. It needs `<changelogurl>` in the manifest and in each update entry, pointing at Joomla-format XML. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
 
 ### CHANGELOG.html Structure
 
