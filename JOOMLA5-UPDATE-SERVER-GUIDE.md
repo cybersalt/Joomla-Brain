@@ -282,6 +282,13 @@ The element goes inside `<update>`, not inside `<downloads>` — the same level 
 - **`<infourl>` in the `<update>` entry** should be a public page for that release, not a homepage, sales page or login-walled download. It shows as a link under the extension name.
 - **Security releases also set the security level in the same `<update>` entry**, e.g. `<security>3</security>` (read by Joomla 5.4.9, 6.1.4 and 6.2).
 
+### Older Joomla versions
+
+- **Joomla 4.4 saves a package's `<changelogurl>` on a fresh install only**, and both of its Changelog modals read the saved `#__extensions.changelogurl`. The feed's URL only makes the button appear. So a site that updates keeps an empty value and an empty modal. If an extension still supports J4, write the URL in `postflight()` (`$parent->getManifest()->changelogurl`, wrapped in try/catch so it can never fail the install). Proven on a 4.4.14 sandbox while preparing StageIt-6 #3; see `refreshChangelogUrl()` in `StageIt-legacy-j3-j4/j4/package/pkg_stageit_enterprise/script.php`.
+- **Joomla 5.4.1 and 6.1.4 save the URL on update** with no script help (tested with real installs). Older J5 versions weren't checked.
+- **Joomla 3.10 has no changelog code**, so the tag does nothing there.
+- **If a feed offers one package's entry to another line** (StageIt's J5 feed also offers 6.6.2), each `<update>` entry needs the `<changelogurl>` for its own package, or the modal has no entry for that version.
+
 ### releases.mysites.guru
 
 A row gets its Notes chip only when the changelog URL is http or https, at most 1,024 characters, and **on the same registrable domain as the update feed** (`cdn.example.com` and `www.example.com` count as the same). It fetches over ports 80 and 443, follows up to three redirects, reads at most 1 MB and caches for six hours.
