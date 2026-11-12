@@ -1245,6 +1245,28 @@ Also: Atum colours **toolbar** buttons by position, not by class (the left group
 
 ---
 
+## 45. `Uri::root()` in an install script fails CLI installs
+
+`php cli/joomla.php extension:install` runs the extension's `script.php` too. There `Uri::root()` builds the URL from `live_site` plus the CLI script name and throws `UnexpectedValueException: Could not parse the requested URI http://example.com:8161cli/joomla.php`. Uncaught in `postflight()`, it fails the **whole package install** after the child extensions are already in. The CLI only prints "Unable to install extension", so the cause is invisible. Hosting panels, deploy scripts and MCP tools that install through the CLI hit the same thing.
+
+**Fix:** only render the install card in the administrator, and keep `Uri::root()` out of anything that runs in every context:
+
+```php
+if (!Factory::getApplication()->isClient('administrator')) {
+    return true; // CLI: no page to show a card on
+}
+```
+
+To see the real reason for a CLI install failure, add a callback logger (`Log::addLogger(['logger' => 'callback', ...], Log::ALL)`) in a copy of `cli/joomla.php`; the error arrives as a `jerror` log entry. Found in cs-continous-learning 2.6.0 testing (2026-11-11).
+
+---
+
+## 46. `CAST(a.id AS CHAR)` against `#__fields_values.item_id`: MySQL error 1267
+
+Joining core articles to custom field values with `fv.item_id = CAST(a.id AS CHAR)` can fail with **1267 Illegal mix of collations**: the cast takes the connection's collation (`utf8mb4_general_ci`), the column is `utf8mb4_unicode_ci`. It works on one server and breaks on the next. Compare numerically instead (`fv.item_id = a.id`), as core's own field queries do, or bind the ids as strings with `bindArray($ids, ParameterType::STRING)` when you have a list. Found in cs-continous-learning 2.6.0 testing (2026-11-11).
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
