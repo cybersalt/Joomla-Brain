@@ -51,6 +51,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 
 ### Checklists
 - `JOOMLA5-CHECKLIST.md`: Pre-release checklist for Joomla 5
+- `JOOMLA7-READINESS.md` + `tools/compat-scan.php` + `JOOMLA7-REMOVALS-6.2.md` (`tools/j7-removals.py`): Getting ready for Joomla 7 while Joomla 6 is current. The per-release rule (static scan + a real test with both Backward Compatibility plugins off), the sandbox traps, the 468 things Joomla 6.2 marks "removed in 7.0" with their replacements, and the status of each scanned Cybersalt extension
 - `JOOMLA6-CHECKLIST.md`: Pre-release checklist for Joomla 6 (building extensions **for** J6 — see `JOOMLA6-UPGRADE-NOTES.md` for migrating a site **to** J6)
 - `NEW-EXTENSION-CHECKLIST.md`: Creating a new Cybersalt extension
 - `VERSION-BUMP-CHECKLIST.md`: Version bump steps
