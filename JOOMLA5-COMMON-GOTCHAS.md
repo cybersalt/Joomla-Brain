@@ -1267,6 +1267,24 @@ Joining core articles to custom field values with `fv.item_id = CAST(a.id AS CHA
 
 ---
 
+## 47. `$form->loadFile('article')` in `onContentPrepareForm` silently loads com_content's own form
+
+A content plugin that adds a tab to the article form with `Form::addFormPath(<plugin>/forms); $form->loadFile('article', false);` adds **nothing**: `loadFile()` with a bare name searches the registered form paths in order, finds **com_content's own `article.xml`** first and re-merges it. No error, no tab. Load your file by **full path** and give it a unique name: `$form->loadFile(JPATH_PLUGINS . '/content/<element>/forms/<element>.xml', false);`. Found in cs-listing-pictures 0.1.0 (2026-11-19).
+
+---
+
+## 48. `addfieldprefix` on the `<form>` root is lost when the file is merged into another form
+
+When a plugin's form XML is merged into an existing form (`$form->loadFile(...)` in `onContentPrepareForm`), only the `<fields>`/`<fieldset>`/`<field>` elements are merged. An `addfieldprefix` on the root `<form>` element never applies, so a custom `type="myfield"` falls back to a plain **text input** (no error). Put `addfieldprefix` on the `<fieldset>` (and/or the `<field>`) instead. Found in cs-listing-pictures 0.1.0 (2026-11-19).
+
+---
+
+## 49. An install `script.php` returning a plain anonymous class is silently skipped
+
+`return new class () { public function postflight(...) {...} };` is **never run** by Joomla 5's installer: no error, no post-install card, and anything the script does (e.g. enabling the plugin on install) doesn't happen, so the plugin installs **disabled**. The returned object must `implements \Joomla\CMS\Installer\InstallerScriptInterface`, which means all five methods: `install`, `update`, `uninstall` (each `(InstallerAdapter $adapter): bool`), `preflight` and `postflight` (`(string $type, InstallerAdapter $adapter): bool`). Found in cs-listing-pictures 0.1.0 (2026-11-19).
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
