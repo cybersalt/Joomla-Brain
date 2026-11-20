@@ -26,6 +26,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 ## Unreleased
 
 ### 🚀 New
+- **2026-11-20** — `JOOMLA5-COMMON-GOTCHAS.md` #50: JED Checker only accepts the plain `defined('_JEXEC') or die` guard; a compound guard such as `|| defined('MY_CLI')` is reported as an error. Let the CLI script define `_JEXEC` instead, and run JED Checker on every release zip (found in Release Manager 1.18.1).
 - **2026-11-13** — `JOOMLA7-READINESS.md`: Joomla 7 work that can start on Joomla 6. Every release is scanned and tested with both Backward Compatibility plugins off; it lists the sandbox traps, the removals extension code hits with their replacements, and a status row per scanned extension (Release Manager, StageIt 6).
 - **2026-11-13** — `tools/compat-scan.php`: finds classes an extension gets only from compat / compat6, classes no core file defines, compat-stub assets and the common Joomla 7 removals (comments ignored). Proven against Release Manager 1.18.0 on 5.4.10 and 6.2.0.
 - **2026-11-13** — `tools/j7-removals.py` + `JOOMLA7-REMOVALS-6.2.md`: every declaration Joomla 6.2.0 marks "removed in 7.0" (468), with Joomla's own replacement text, plus what only compat6 still carries.

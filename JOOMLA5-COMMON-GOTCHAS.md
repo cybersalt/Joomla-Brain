@@ -1285,6 +1285,21 @@ When a plugin's form XML is merged into an existing form (`$form->loadFile(...)`
 
 ---
 
+## 50. JED Checker only accepts the plain `_JEXEC` guard: a compound guard is an ERROR even though it protects the file
+
+JED Checker's JEXEC rule is a regex, not a code reader. It wants, after the optional `declare`, `namespace` and `use` lines, exactly `defined('_JEXEC') or die` (or `|| die`, `exit`; a leading `\` is fine). Anything added to the condition fails:
+
+```php
+defined('_JEXEC') || defined('MY_CLI') or die;   // ERROR "JEXEC security check was not found"
+\defined('_JEXEC') or die;                         // passes
+```
+
+The file was safe; the checker just couldn't see it. A JED reviewer sees the error, so it blocks the listing. **When a file is shared with a command-line tool** (a generator, a build script), have that script `define('_JEXEC', 1);` before it `require`s the file, and keep the plain guard in the file. Found in Release Manager 1.18.1's `KitBuilder.php` (2026-11-20): the compound guard shipped in 1.15.0 and went through seven releases unnoticed because JED Checker only ran when the JED listing was prepared.
+
+**What to take from it:** run JED Checker on **every release zip** of anything that is or will be on the JED, not only at listing time; a JED Checker "error" can be a pattern miss rather than a real hole, so read the rule before changing code, then write the code in the exact form the rule expects. Its JAMSS warnings on `"\x0B"` in a `trim()` character list or on `strtr()` template filling are the same kind of pattern match: explain them to the reviewer, don't rewrite working code for them.
+
+---
+
 ## Related
 
 - [`JOOMLA5-EDGE-CASE-SCENARIOS.md`](JOOMLA5-EDGE-CASE-SCENARIOS.md) — environmental edge cases (hosting, CDNs, third-party extensions)
