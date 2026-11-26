@@ -72,6 +72,7 @@ When next working on any of these extensions, add full Joomla update server supp
 | cs-hikashop-login-redirect | ✅ | ✅ | ✅ | ✅ | ✅ |
 | cs-menu-item-conditions | ❌ | ❌ | ❌ | ❌ | ��� |
 | cs-edge-cache-marker | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cs-template-cache-clear | N/A (Release Manager, not set up yet) | ❌ | ❌ | ❌ | ✅ |
 | cs-0-9-and-a-z-menu | N/A (Release Manager) | ✅ (Release Manager) | ✅ | ❌ (see note) | ✅ |
 
 **Release Manager-served repos** (`<updateservers>` points at `com_csreleasemanager&task=api.updatexml` on cybersalt.com): there is no `updates.xml` to maintain, and the sha256 comes from the Release Manager version record. Release Manager has served `api.changelogxml` since 1.12.6 (2026-10-10), so manifests can point at it, including private repos, whose raw.githubusercontent URLs 404 for customer sites. **Known gap (2026-11-06):** its `api.updatexml` feed still emits no `<changelogurl>`, so the Update screen shows N/A. See `JOOMLA5-UPDATE-SERVER-GUIDE.md` → "The Changelog Button".
