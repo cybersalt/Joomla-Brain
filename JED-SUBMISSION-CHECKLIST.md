@@ -225,7 +225,10 @@ From preparing six extensions plus ~30 MCP for J add-ons. The sources are cited 
 
 **Names** (the manifest `<name>` must match the listing)
 - Banned: the reserved words **module / plugin / template / component / extension**, **"Free"**, version
-  numbers, company names. JED Checker flags all of them.
+  numbers, company names. JED Checker flags all of them (NM3, an error, whole words only: plural
+  "Extensions" passes). ⚠️ The published rules page names only module / plugin / template, and
+  "Regular Labs Extension Manager" (2014) is listed with "Extension", so tell the developer about the
+  conflict rather than calling the word simply banned.
 - **"Joomla" in a name needs an OSM trademark licence.** Use "for J" or similar.
 - Add-on names end with **"for <parent>"**.
 - JED Checker's 40-character "too long" warning counts the whole translated name, including `System - `.

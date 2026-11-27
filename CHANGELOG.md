@@ -38,6 +38,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 - **2026-11-06** — `PACKAGE-BUILD-NOTES.md` and `JOOMLA5-COMPONENT-GUIDE.md` told extensions to set `<changelogurl>` to `CHANGELOG.html`, which gives an empty Changelog modal. Both now use `changelog.xml`. `JOOMLA5-CHECKLIST.md` listed a `<maintenance>` group that Joomla doesn't have; removed. `REPOS-USING-BRAIN.md` said Release Manager had no changelog endpoint (it has since 1.12.6) and called StageIt an "environment banner system". Corrected.
 
 ### 🔧 Improvements
+- **2026-11-26** — `VERSION-BUMP-CHECKLIST.md`: fix every security finding before a bump, LOW and the "below the bar" notes too, never defer them (Tim, 2026-11-08). `JED-SUBMISSION-CHECKLIST.md`: JED Checker's NM3 name check matches whole words only (plural "Extensions" passes), and the published rules name only module / plugin / template, so "Extension" is a conflict to raise with the developer rather than a flat ban.
 - **2026-11-25** — `JOOMLA-CODING-STANDARDS.md`: phpcs 4 fails the run on warnings alone, so `phpcs.xml` must switch off the ones Joomla code has on purpose. `NEW-EXTENSION-CHECKLIST.md`: add CI with `add-ci.ps1`; secrets in password boxes. `README.md` lists `add-ci.ps1`.
 - **2026-11-06** — `VERSION-BUMP-CHECKLIST.md`: changelogs are part of every release, for every extension, and a release isn't done until the exact version's entry can be seen (Tim's rule). `JOOMLA5-LIBRARY-GUIDE.md`: fixed a link to a guide that doesn't exist.
 

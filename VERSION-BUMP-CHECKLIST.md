@@ -11,7 +11,7 @@ Follow this checklist every time you bump the version of a Cybersalt extension.
 ## Steps (in order)
 
 - [ ] **Run a security review of every file changed since the previous tagged version.** Use the `/security-review` workflow against the diff (or against the working tree if changes haven't been committed yet). This is a hard prerequisite — never bump the version on code that hasn't been security-reviewed since the last bump. The review depth scales with bump size — see "Review depth by bump type" below.
-- [ ] **Address any HIGH or MEDIUM findings** before proceeding. LOW findings can be deferred to a follow-up release with a tracking issue.
+- [ ] **Fix every finding before proceeding: HIGH, MEDIUM, LOW, and the "below the bar" notes too.** Don't defer them and don't ask whether to leave them. Tim, 2026-11-08: *"we should always fix low severity notes. We should fix all notes of security. We shouldn't just come back and ask me if I want to leave those."*
 - [ ] **Bump version number** in every manifest XML (component, plugin, module, package — whatever the extension ships)
 - [ ] **Update CHANGELOG.md** — add new version section at top with emoji headers (🚀 🔧 📦 🐛 🔒 📝 etc.)
 - [ ] **Update CHANGELOG.html** — matching article-ready HTML (no `<html>`, `<head>`, `<body>`, or `<style>` tags)
