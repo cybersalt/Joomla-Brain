@@ -26,6 +26,8 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 ## Unreleased
 
 ### 🚀 New
+- **2026-11-25** — `JOOMLA-EXTENSION-WISHLIST.md`: "Eye-Toggle Reveal on Secret Fields", the rule the Timed Blur section already referred to. Typed secrets (API keys, tokens, passwords, Download IDs) use core's `type="password"` field, which draws the eye button itself; hand-built screens copy core's markup and load `field.passwordview`. Tracker #11.
+- **2026-11-25** — CI template: `templates/.github/workflows/ci.yml` + `templates/tests/check.php`, and `add-ci.ps1` to copy them into an extension repo. `check.php` finds the manifests and language folders itself and checks XML/JSON, byte order marks, manifest-listed files in git in the exact case, that Joomla can read each language file, and translation keys and placeholders against English. Tested against 10 extension repos and a 16-case self-test. Tracker #18.
 - **2026-11-20** — `JOOMLA5-COMMON-GOTCHAS.md` #50: JED Checker only accepts the plain `defined('_JEXEC') or die` guard; a compound guard such as `|| defined('MY_CLI')` is reported as an error. Let the CLI script define `_JEXEC` instead, and run JED Checker on every release zip (found in Release Manager 1.18.1).
 - **2026-11-13** — `JOOMLA7-READINESS.md`: Joomla 7 work that can start on Joomla 6. Every release is scanned and tested with both Backward Compatibility plugins off; it lists the sandbox traps, the removals extension code hits with their replacements, and a status row per scanned extension (Release Manager, StageIt 6).
 - **2026-11-13** — `tools/compat-scan.php`: finds classes an extension gets only from compat / compat6, classes no core file defines, compat-stub assets and the common Joomla 7 removals (comments ignored). Proven against Release Manager 1.18.0 on 5.4.10 and 6.2.0.
@@ -36,6 +38,7 @@ Entries are dated YYYY-MM-DD and listed newest-first within each section.
 - **2026-11-06** — `PACKAGE-BUILD-NOTES.md` and `JOOMLA5-COMPONENT-GUIDE.md` told extensions to set `<changelogurl>` to `CHANGELOG.html`, which gives an empty Changelog modal. Both now use `changelog.xml`. `JOOMLA5-CHECKLIST.md` listed a `<maintenance>` group that Joomla doesn't have; removed. `REPOS-USING-BRAIN.md` said Release Manager had no changelog endpoint (it has since 1.12.6) and called StageIt an "environment banner system". Corrected.
 
 ### 🔧 Improvements
+- **2026-11-25** — `JOOMLA-CODING-STANDARDS.md`: phpcs 4 fails the run on warnings alone, so `phpcs.xml` must switch off the ones Joomla code has on purpose. `NEW-EXTENSION-CHECKLIST.md`: add CI with `add-ci.ps1`; secrets in password boxes. `README.md` lists `add-ci.ps1`.
 - **2026-11-06** — `VERSION-BUMP-CHECKLIST.md`: changelogs are part of every release, for every extension, and a release isn't done until the exact version's entry can be seen (Tim's rule). `JOOMLA5-LIBRARY-GUIDE.md`: fixed a link to a guide that doesn't exist.
 
 ### 🚀 New

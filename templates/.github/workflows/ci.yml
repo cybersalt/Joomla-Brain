@@ -1,0 +1,131 @@
+# CI for a Cybersalt Joomla extension. Copied from Joomla-Brain
+# templates/.github/workflows/ci.yml, together with templates/tests/check.php.
+#
+# Works as it is in most repos: every step finds its own files, and the
+# optional ones (phpcs, Composer, PHPUnit, tests/run-all.php) only run when
+# the repo has what they need. Things to set per repo:
+#   - the PHP versions in the matrix (the floor in the manifest, and the
+#     newest PHP the supported Joomla runs on)
+#   - the build step at the bottom, if the repo has a build script
+#
+# Lessons that are built in (cs-menu-conditions was red for months):
+#   - the runner image has no xmllint any more, so XML is checked with PHP
+#   - phpcs fails on warnings, so it only runs with the repo's own phpcs.xml
+#     (see JOOMLA-CODING-STANDARDS.md for the exclusions Joomla code needs)
+
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Joomla 5 needs PHP 8.1+, Joomla 6 needs 8.3+. Add '7.4' for an
+        # extension that still installs on Joomla 3.
+        php: ['8.1', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, simplexml
+          coverage: none
+
+      # git ls-files lists only tracked files, so submodules, vendor and
+      # build output are left out. php -l exits 255 on an error, which would
+      # make xargs stop at the first bad file, so each call exits 1 instead.
+      - name: PHP syntax
+        run: |
+          status=0
+          git ls-files -z '*.php' | xargs -0 -r -n1 -P4 sh -c 'php -d display_errors=1 -d log_errors=0 -l "$0" || exit 1' > lint.log 2>&1 || status=$?
+          grep -v '^No syntax errors' lint.log || true
+          exit $status
+
+      - name: Manifests, XML, JSON and language files
+        run: php tests/check.php
+
+      - name: Composer
+        if: hashFiles('composer.json') != ''
+        run: composer install --no-interaction --no-progress
+
+      - name: PHPUnit
+        if: hashFiles('phpunit.xml', 'phpunit.xml.dist') != ''
+        run: vendor/bin/phpunit
+
+      - name: Repo tests (tests/run-all.php)
+        if: hashFiles('tests/run-all.php') != ''
+        run: php tests/run-all.php
+
+  standards:
+    name: Coding standards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2, phpcs
+          coverage: none
+
+      - name: Composer
+        if: hashFiles('composer.json') != ''
+        run: composer install --no-interaction --no-progress
+
+      # phpcs reads phpcs.xml from the repo root. Composer's copy wins when
+      # composer.json pins joomla/coding-standards.
+      - name: PHP_CodeSniffer
+        if: hashFiles('phpcs.xml', 'phpcs.xml.dist', '.phpcs.xml') != ''
+        run: |
+          if [ -x vendor/bin/phpcs ]; then vendor/bin/phpcs -q --report=full; else phpcs -q --report=full; fi
+
+  javascript:
+    name: JavaScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Minified files are built from sources that are checked here.
+      - name: JavaScript syntax
+        run: |
+          status=0
+          git ls-files -z '*.js' '*.mjs' ':(exclude)*.min.js' | xargs -0 -r -n1 node --check || status=$?
+          exit $status
+
+      - name: ESLint
+        if: hashFiles('eslint.config.mjs', 'eslint.config.js') != '' && hashFiles('package.json') != ''
+        run: |
+          npm ci || npm install
+          npx eslint .
+
+  # Uncomment when the repo has a build script. A package that will not build
+  # or unpack should never reach a release.
+  # package:
+  #   name: Package
+  #   runs-on: ubuntu-latest
+  #   needs: [php]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Build
+  #       run: python tools/build.py
+  #     - name: The package unpacks
+  #       run: unzip -tqq *.zip

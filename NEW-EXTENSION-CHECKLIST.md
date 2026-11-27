@@ -12,6 +12,7 @@ Follow this checklist in order when creating a new Joomla extension.
 - [ ] **Create extension folder** — `plg_{group}_{name}/`, `mod_{name}/`, or `com_{name}/` with proper structure
 - [ ] **Add `.gitignore`** — exclude `*.zip` build artifacts
 - [ ] **Add Joomla Brain submodule** — `git submodule add https://github.com/cybersalt/Joomla-Brain.git .joomla-brain`
+- [ ] **Add CI** — `.\.joomla-brain\add-ci.ps1` copies in `.github/workflows/ci.yml` and `tests/check.php` (see `JOOMLA-EXTENSION-WISHLIST.md` → "Automated Lint + Test on Every Push"). Run `php tests/check.php` before the first push.
 
 ## Extension Code
 
@@ -23,6 +24,7 @@ Follow this checklist in order when creating a new Joomla extension.
 - [ ] **`postflight($type)` gates on `$type` before rendering the install card.** Joomla calls `postflight()` on **uninstall** too — without the gate, the user gets an "installed, click here to open the dashboard" card right after they hit Uninstall, often linking to a route that no longer exists. Early-return from `postflight()` when `$type` isn't one of `install`, `update`, `discover_install`. Same gate belongs around any postflight side effect that should only run on install/update (e.g. `enableWebservicesPlugin()` — don't auto-enable a plugin that's about to be removed).
 - [ ] **Shipped-file integrity check (EVERY extension, Tim 2026-10-28)** — follow `INTEGRITY-CHECK.md`: `Install-IntegrityCheck.ps1` copies the check in, `<filename>integrity.json</filename>` goes in the manifest, the build calls `New-IntegrityList.ps1` before zipping, `integrity.json` goes in `.gitignore`, and the alert shows on the dashboard (components) or through the `Integrity` field on the settings page (plugins, modules, templates). Joomla doesn't roll back a failed update, so this is how the site owner finds out a file is missing or 0 bytes.
 - [ ] **Dark mode safe** — Bootstrap classes only, no inline colors
+- [ ] **Secrets in password boxes** — API keys, tokens, passwords and Download IDs use `type="password"` with the eye button (`JOOMLA-EXTENSION-WISHLIST.md` → "Eye-Toggle Reveal on Secret Fields"); emails and tokens the screen shows back use the timed blur
 - [ ] **HTML-escape `Text::_()` in installer output** — `script.php`'s `postflight()` echoes into Joomla's installer frame; wrap every `Text::_()` in `htmlspecialchars(..., ENT_QUOTES \| ENT_SUBSTITUTE, 'UTF-8')` even when the strings are static today (a future translation file could carry markup that breaks the layout, or worse). If your package ships a package-level `script.php` AND a component-level `script.php`, **fix both** — the package one is easy to forget.
 
 ## Security Baseline (MANDATORY for components and any extension that writes files)

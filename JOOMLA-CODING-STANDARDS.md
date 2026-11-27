@@ -264,6 +264,14 @@ everywhere else:
 // phpcs:enable PSR1.Files.SideEffects
 ```
 
+**Warnings fail the run since phpcs 4.** phpcs 4.0.4 exits with code 2 when it finds
+only warnings, so CI goes red on a codebase with no errors at all. Every warning the
+code has on purpose has to be switched off in `phpcs.xml`: the `_JEXEC` side effect
+(exclude `PSR1.Files.SideEffects`, or wrap the guard as above) and, if you allow long
+lines, `Generic.Files.LineLength`. Found in cs-menu-conditions, whose CI was red from
+May to November 2026 (this and a missing `xmllint`); its `phpcs.xml` is a short
+working example.
+
 ### `.gitattributes` is not optional
 
 The `Generic.Files.LineEndings` sniff fails on **every file** when a repo is checked
@@ -277,7 +285,7 @@ out on Windows with default autocrlf. Add:
 `eol=lf` forces LF in the *working tree*, not just the repo, so local phpcs sees the
 same bytes CI does.
 
-Reference implementation of all of the above: [cs-smart-pagenav](https://github.com/cybersalt/cs-smart-pagenav) — `phpcs.xml`, `.gitattributes`, `.github/workflows/ci.yml`.
+Reference implementation of all of the above: [cs-smart-pagenav](https://github.com/cybersalt/cs-smart-pagenav) — `phpcs.xml`, `.gitattributes`, `.github/workflows/ci.yml`. The Brain's CI template (`templates/.github/workflows/ci.yml`, copied in by `add-ci.ps1`) runs phpcs whenever the repo has a `phpcs.xml`.
 
 For Cybersalt extensions, also exclude the build artefacts directory and the temporary 7-Zip staging folder if they exist at the repo root:
 

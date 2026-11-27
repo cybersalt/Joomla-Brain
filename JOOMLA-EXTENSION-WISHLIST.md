@@ -94,7 +94,14 @@ The `layout="joomla.form.field.list-fancy-select"` attribute swaps the default r
 
 **Why it matters:** Pre-flight catches the typos and PSR-4 case-sensitivity mistakes that break extensions on Linux production servers but pass silently on Windows dev machines.
 
-**Implementation pointer:** Adopt Joomla Bible Study's workflow as a starting template. A minimal `.github/workflows/ci.yml` runs on `push` + `pull_request`, sets up PHP 8.3 + Node 20, caches Composer + npm, runs the four checks above as parallel jobs. Future TODO for the Brain: add a `templates/.github/workflows/ci.yml` that new extensions can copy in via `create-template.ps1`.
+**Implementation pointer:** The Brain's template is `templates/.github/workflows/ci.yml` plus `templates/tests/check.php`. From the extension repo, `.\.joomla-brain\add-ci.ps1` copies both in (it never overwrites a file that is already there). Built from StageIt 6's and MigrateMe 4's checks, the CI that is green on GitHub in cs-smart-pagenav and cs-page-protector, and what kept cs-menu-conditions red for months.
+
+- **Always runs:** PHP syntax on every tracked `.php` file (PHP 8.1 / 8.3 / 8.4 by default; set the matrix per repo), JavaScript syntax on every tracked `.js` / `.mjs` (not `.min.js`), and `php tests/check.php`.
+- **`tests/check.php`** finds the manifests and language folders itself and checks what git would commit: every XML and JSON file parses; no byte order mark in PHP or INI files; every file and folder a manifest lists is in git in the exact case (Linux cares, Windows doesn't); Joomla can read every language file (the same `parse_ini_file` call Joomla makes); each translation has every English string and no others, with the same `%s` / `%d` placeholders. Two settings at the top: `$sameVersion` (every manifest has the package's version) and `$skipLanguageFiles`. Run it by hand before a push: `php tests/check.php`.
+- **Runs when the repo has what it needs:** phpcs (`phpcs.xml`; see [[JOOMLA-CODING-STANDARDS.md]] for the exclusions, because phpcs fails on warnings), Composer, PHPUnit (`phpunit.xml`), `tests/run-all.php`, ESLint (`eslint.config.mjs` + `package.json`). A commented-out package build job is at the bottom.
+- **Built-in lessons:** the runner image no longer has `xmllint` (cs-menu-conditions failed with exit 127), so XML is checked with PHP. `php -l` exits 255, which stops `xargs` at the first bad file, so each call exits 1 and every bad file is listed.
+
+Tracker: Joomla-Brain issue #18.
 
 ---
 
@@ -610,6 +617,51 @@ The pattern uses a tiny **custom form field type** — `BrandheaderField` extend
 
 ---
 
+## 👁 Eye-Toggle Reveal on Secret Fields
+
+**Source:** Tim Davis, locked in 2026-05-11 while testing cs-mcp-for-j v1.7.x: masked by default with an eye button to reveal, never a CSS blur. A "dream of mine for every Joomla extension" item, so it applies to every Cybersalt extension that takes a secret.
+
+**Pattern:** Any field where the operator **types or pastes** a secret is a password box: API keys and tokens, passwords, OAuth client secrets, licence keys and Download IDs. It shows dots until the operator clicks the eye button next to it. The click switches the box to plain text so they can check the paste, and a second click hides it again. The value is never sent to the page anywhere else in plain text (no second copy in a help line, a "current value" note or a `data-` attribute).
+
+- **Form XML (settings, options, plugin params):** use core's `type="password"` field. Since Joomla 4 it draws the eye button itself, with the screen-reader text and the `icon-eye` / `icon-eye-slash` swap, so there is nothing to build:
+
+  ```xml
+  <field name="api_key" type="password"
+         label="PLG_SYSTEM_EXAMPLE_API_KEY_LABEL"
+         description="PLG_SYSTEM_EXAMPLE_API_KEY_DESC"
+         autocomplete="new-password" filter="raw" />
+  ```
+
+  `autocomplete="new-password"` stops the browser offering to fill in the admin's own login password. Use `filter="raw"` only when the secret may contain characters the default filter strips; most keys and Download IDs don't need it.
+- **Hand-built screens (dashboards, setup guides, a token box in a view):** copy core's markup and load core's script, so the button looks and behaves the same as every other Joomla password box:
+
+  ```php
+  $wa->useScript('field.passwordview');
+  Text::script('JSHOWPASSWORD');
+  Text::script('JHIDEPASSWORD');
+  ```
+
+  ```html
+  <div class="input-group">
+      <input type="password" class="form-control" id="example-token" autocomplete="off">
+      <button type="button" class="btn btn-secondary input-password-toggle">
+          <span class="icon-eye icon-fw" aria-hidden="true"></span>
+          <span class="visually-hidden"><?php echo Text::_('JSHOWPASSWORD'); ?></span>
+      </button>
+  </div>
+  ```
+
+  Core's `passwordview.js` finds every `.input-password-toggle` that sits next to an `input[type="password"]`, on page load and on `joomla:updated`. Keep the icon as the button's first child and the screen-reader text as its last, because that is where the script looks. The button is `btn-secondary`, not `btn-outline-secondary`, which loses its border in dark Atum (see "Dark Mode Tested").
+- **A secret the browser should remember** (an MCP token the operator pastes once to build config snippets): keep it in `localStorage`, never in the extension's params, and add a trash-icon (`icon-trash`) clear button and a status line ("Saved in this browser" / "No token saved"). Reference: cs-mcp-for-j's dashboard token box.
+
+**Not the same as shown-back values.** This rule is for boxes the operator types into. A value the screen **shows back** (a saved licence email, a token displayed for copying, an email in a list) uses the timed blur below. A shown-back email in an editable box can have both, the blur plus an eye button as the keyboard route (cs-menu-conditions `RevealEmailField`, below).
+
+**Why it matters:** Tim records training videos and shares his screen with clients, so a secret in plain text on a settings tab is one frame-grab from being public. Dots are a convention everyone recognises as "hidden". A blur still shows the secret's length and shape, which is why Tim chose dots over blur. The eye button lets the operator check a paste worked without the secret ever sitting in view by default.
+
+**Implementation pointer:** Core first: `layouts/joomla/form/field/password.php` and `media/system/js/fields/passwordview.js` (Joomla 5 and 6). Cybersalt references: cs-mcp-for-j `packages/com_csmcpforj/admin/tmpl/dashboard/default.php` (hand-built token box with eye, clear button and `localStorage`; its eye button still uses `btn-outline-secondary`, which the 2026-11-06 audit flagged) and cs-menu-conditions `plg_system_csmenuconditions/src/Field/RevealEmailField.php` as of commit `dd2b726` (eye button on a blurred email; the field may be dropped in a later release, so read it from that commit). Tracker: Joomla-Brain issue #11.
+
+---
+
 ## 🌫 Timed Blur on Email Addresses and Shown Secrets (With a Setting)
 
 **Source:** Tim Davis. First built in cs-mcp-for-j (2026-08-15 token pill, 2026-08-20 Pro email, hold-to-reveal countdown 2026-08-21). Made an every-extension rule 2026-10-30 while reworking the StageIt Automatic Updates screen: *"the JavaScript blur, timed blur that covers up email addresses inside the updates area so they're not accidentally revealed. And that comes with having a setting for that as well."*
@@ -624,7 +676,7 @@ A setting comes with it, in **Options → Privacy**:
 
 The two timing fields use `showon="blur_email:1"`.
 
-**Not the same as secret input fields.** A field where the operator *types* a password or API token still uses `type="password"` + eye toggle (see the "Eye-toggle reveal on secret fields" rule). The timed blur is for values the screen *shows back*, where the risk is a screen share, a training video or someone looking over a shoulder.
+**Not the same as secret input fields.** A field where the operator *types* a password or API token still uses `type="password"` + eye toggle (see "Eye-Toggle Reveal on Secret Fields" above). The timed blur is for values the screen *shows back*, where the risk is a screen share, a training video or someone looking over a shoulder.
 
 **Why it matters:** the whole purpose is not revealing emails by accident in video recordings (Tim, 2026-10-30). Tim records training videos and shares his screen with clients. An email or token sitting in plain text on an admin screen is one frame-grab away from being public. A plain CSS `:hover` reveal undoes itself whenever the pointer crosses the value on its way somewhere else; the hold-to-reveal delay makes showing it a deliberate act, and the auto re-blur covers "I looked, then got distracted".
 

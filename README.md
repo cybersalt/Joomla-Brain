@@ -66,6 +66,7 @@ See `NEW-EXTENSION-CHECKLIST.md` → "Security Baseline" for the full checklist,
 - `check-encoding.ps1` / `convert-utf8.ps1`: File encoding utilities
 - `validate-package.ps1`: Package validation
 - `create-template.ps1`: Extension template generator
+- `add-ci.ps1`: Copies the CI template (`templates/.github/workflows/ci.yml` + `templates/tests/check.php`) into an extension repo
 
 ### Other
 - `company-info.md`: Cybersalt author/copyright details
